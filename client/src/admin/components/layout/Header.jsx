@@ -5,12 +5,13 @@ import { authAPI } from '../../services/api';
 import AlertModal from '../ui/AlertModal';
 
 // Header component with branding and user profile section
-const Header = () => {
+const Header = ({ onToggleSidebar, isSidebarVisible }) => {
   const navigate = useNavigate();
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('auth_user') || 'null'); } catch { return null; }
   });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isLogoHovered, setIsLogoHovered] = useState(false);
   const userRef = useRef(null);
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
 
@@ -54,7 +55,7 @@ const Header = () => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '0.3rem 0.7rem',
+    padding: '0.4rem 0.5rem',
     position: 'fixed',
     top: 0,
     left: 0,
@@ -68,12 +69,31 @@ const Header = () => {
   const brandingContainerStyles = {
     display: 'flex', 
     alignItems: 'center', 
-    gap: '0.20rem' 
+    gap: '0.15rem' 
+  };
+
+  const logoContainerStyles = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    padding: '0.2rem',
+    borderRadius: '6px',
+    transition: 'all 0.2s ease-in-out',
   };
 
   const logoStyles = {
-    height: '65px',
+    height: '45px',
     width: 'auto',
+    cursor: 'pointer',
+    transition: 'transform 0.2s ease-in-out',
+    transform: isLogoHovered ? 'scale(1.15)' : 'scale(1)',
+  };
+
+  const handleLogoClick = () => {
+    if (onToggleSidebar) {
+      onToggleSidebar();
+    }
   };
 
   const brandingTextStyles = {
@@ -84,17 +104,17 @@ const Header = () => {
   // Main title styling
   const titleStyles = {
     fontWeight: 800, 
-    fontSize: '1.5rem',
+    fontSize: '1.1rem',
     letterSpacing: '0.1px',
     fontFamily: 'var(--font-main)',
     color: 'var(--dark-green)',
-    lineHeight: '1.4'
+    lineHeight: '1.3'
   };
 
   // Subtitle styling
   const subtitleStyles = {
     fontWeight: 500, 
-    fontSize: '0.75rem',
+    fontSize: '0.60rem',
     letterSpacing: '0.3px',
     fontFamily: 'var(--font-main)',
     color: 'var(--dark-brown)',
@@ -105,8 +125,8 @@ const Header = () => {
   const userContainerStyles = {
     display: 'flex', 
     alignItems: 'center', 
-    gap: '0.75rem',
-    padding: '0.5rem 1rem',
+    gap: '0.5rem',
+    padding: '0.3rem 0.8rem',
   };
 
   const userInfoStyles = {
@@ -117,22 +137,15 @@ const Header = () => {
 
   const userRoleStyles = {
     fontWeight: 500, 
-    fontSize: '1rem',
+    fontSize: '0.85rem',
     color: 'var(--forest-green)',
-    fontFamily: 'var(--font-main)'
-  };
-
-  const userNameStyles = {
-    fontWeight: 700,
-    fontSize: '0.95rem',
-    color: 'var(--primary-green)',
     fontFamily: 'var(--font-main)'
   };
 
   // User avatar with initials
   const avatarStyles = {
-    width: 50,
-    height: 50,
+    width: 40,
+    height: 40,
     borderRadius: '50%',
     background: 'var(--mint-green)',
     display: 'flex',
@@ -140,7 +153,7 @@ const Header = () => {
     justifyContent: 'center',
     color: 'var(--forest-green)',
     fontWeight: 700,
-    fontSize: '1.2rem',
+    fontSize: '1rem',
     fontFamily: 'var(--font-main)',
     boxShadow: '0 2px 4px var(--shadow-light)'
   };
@@ -148,11 +161,18 @@ const Header = () => {
   return (
     <header style={headerStyles}>
       <div style={brandingContainerStyles}>
-        <img 
-          src={coffeeLogo} 
-          alt="Coffee Crop Logo" 
-          style={logoStyles}
-        />
+        <div 
+          style={logoContainerStyles}
+          onClick={handleLogoClick}
+          onMouseEnter={() => setIsLogoHovered(true)}
+          onMouseLeave={() => setIsLogoHovered(false)}
+        >
+          <img 
+            src={coffeeLogo} 
+            alt="Coffee Crop Logo" 
+            style={logoStyles}
+          />
+        </div>
         <div style={brandingTextStyles}>
           <span style={titleStyles}>
             Coffee Crop Monitoring System
@@ -166,10 +186,7 @@ const Header = () => {
       <div style={{ position: 'relative' }} ref={userRef}>
         <div style={userContainerStyles}>
           <div style={{ ...userInfoStyles, cursor: 'pointer' }} onClick={() => setMenuOpen((v) => !v)}>
-            <span style={userNameStyles}>{user?.username || 'Admin'}</span>
-            <span style={userRoleStyles}>
-              {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Administrator'}
-            </span>
+            <span style={userRoleStyles}>Admin</span>
           </div>
           <div style={{ ...avatarStyles, cursor: 'pointer' }} onClick={() => setMenuOpen((v) => !v)}>{initials}</div>
         </div>

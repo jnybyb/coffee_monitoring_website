@@ -23,7 +23,7 @@ const SidebarButtons = ({
     color: isActive ? 'var(--dark-green)' : 'var(--light-gray)',
     fontFamily: 'inherit',
     fontWeight: isActive ? 600 : (isParent ? 400 : 500),
-    fontSize: isParent ? '0.75rem' : '0.7rem',
+    fontSize: isParent ? '0.75rem' : '0.65rem',
     padding: isParent ? '0.65rem .75rem' : '0.75rem 0.75rem 0.65rem 1rem',
     borderRadius: isParent ? '7px' : '6px',
     cursor: 'pointer',

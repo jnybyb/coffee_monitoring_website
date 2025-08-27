@@ -75,23 +75,23 @@ const LoadingModal = ({
       <div
         style={{
           backgroundColor: 'white',
-          borderRadius: '10px',
+          borderRadius: '6px',
           width: '100%',
-          maxWidth: '340px',
-          padding: '28px 24px',
+          maxWidth: '280px',
+          padding: '40px 5px',
           boxShadow: '0 10px 25px rgba(0, 0, 0, 0.25)',
           textAlign: 'center',
           position: 'relative'
         }}
       >
-        <div style={{ marginBottom: '14px' }}>
-          <InlineSpinner size="42px" color="var(--emerald-green)" />
+        <div style={{ marginBottom: '12px' }}>
+          <InlineSpinner size="35px" color="var(--emerald-green)" />
         </div>
         <h3
           style={{
-            margin: '0 0 8px 0',
+            margin: '0 0 6px 0',
             color: 'var(--black)',
-            fontSize: '18px',
+            fontSize: '16px',
             fontWeight: 700
           }}
         >
@@ -139,5 +139,10 @@ const LoadingModal = ({
 };
 
 export default LoadingModal;
+
+// A convenience wrapper for a dedicated "Logging in" modal
+export const LoggingInModal = ({ isOpen }) => (
+  <LoadingModal isOpen={isOpen} title="Signing in..." message="" dismissible={false} />
+);
 
 

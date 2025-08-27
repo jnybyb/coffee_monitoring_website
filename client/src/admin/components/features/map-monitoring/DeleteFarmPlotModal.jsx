@@ -1,9 +1,43 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { HiOutlineTrash } from "react-icons/hi2";
 import { FaRegIdCard } from "react-icons/fa";
 
-const DeleteFarmPlotModal = ({ isOpen, onClose, onConfirm, plot, isLoading = false }) => {
+const DeleteFarmPlotModal = ({ isOpen, onClose, onConfirm, plot, plotIndex, isLoading = false }) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   if (!isOpen || !plot) return null;
+
+  // Helper function to extract plot number
+  const getPlotNumber = () => {
+    console.log('DeleteFarmPlotModal - plotIndex:', plotIndex);
+    console.log('DeleteFarmPlotModal - plot:', plot);
+    
+    // If plotIndex is provided, use it to calculate plot number (index + 1)
+    if (plotIndex !== undefined && plotIndex !== null) {
+      const plotNum = plotIndex + 1;
+      console.log('DeleteFarmPlotModal - using plotIndex, result:', plotNum);
+      return plotNum;
+    }
+    
+    // Fallback to existing logic
+    if (plot.plotNumber) {
+      // If plotNumber already contains "Plot #", extract just the number
+      const match = plot.plotNumber.match(/Plot\s*#?\s*(\d+)/i);
+      if (match) {
+        console.log('DeleteFarmPlotModal - using plotNumber match, result:', match[1]);
+        return match[1];
+      }
+      // If it's just a number or other format, return as is
+      console.log('DeleteFarmPlotModal - using plotNumber as is, result:', plot.plotNumber);
+      return plot.plotNumber;
+    }
+    if (plot.id) {
+      console.log('DeleteFarmPlotModal - using plot.id, result:', plot.id);
+      return plot.id;
+    }
+    console.log('DeleteFarmPlotModal - fallback to N/A');
+    return 'N/A';
+  };
 
   const styles = {
     overlay: {
@@ -22,7 +56,7 @@ const DeleteFarmPlotModal = ({ isOpen, onClose, onConfirm, plot, isLoading = fal
       backgroundColor: 'white',
       borderRadius: '12px',
       padding: '0',
-      maxWidth: '400px',
+      maxWidth: '350px',
       width: '90%',
       boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
       position: 'relative',
@@ -44,7 +78,7 @@ const DeleteFarmPlotModal = ({ isOpen, onClose, onConfirm, plot, isLoading = fal
     title: {
       color: 'var(--black)',
       margin: 0,
-      fontSize: '0.9rem',
+      fontSize: '1rem',
       fontWeight: '600'
     },
     content: {
@@ -60,9 +94,11 @@ const DeleteFarmPlotModal = ({ isOpen, onClose, onConfirm, plot, isLoading = fal
     },
     message: {
       color: 'var(--black)',
-      fontSize: '12px',
+      fontSize: '13.5px',
       marginBottom: '1.5rem',
-      lineHeight: '1.5'
+      lineHeight: '1.5',
+      fontWeight: '600',
+
     },
     plotInfo: {
       backgroundColor: '#f8f9fa',
@@ -116,7 +152,7 @@ const DeleteFarmPlotModal = ({ isOpen, onClose, onConfirm, plot, isLoading = fal
     },
     warning: {
       color: 'var(--red)',
-      fontSize: '11px',
+      fontSize: '10px',
       fontStyle: 'italic',
       marginBottom: '1.5rem'
     },
@@ -149,10 +185,14 @@ const DeleteFarmPlotModal = ({ isOpen, onClose, onConfirm, plot, isLoading = fal
     onClose();
   };
 
-  const handleConfirm = () => {
-    if (!isLoading) {
-      onConfirm();
-    }
+  const handleConfirm = async () => {
+    if (isLoading || isDeleting) return;
+    
+    // Close modal immediately and let parent handle loading/success
+    onClose();
+    
+    // Call the onConfirm function (parent will handle loading and success)
+    await onConfirm();
   };
 
   return (
@@ -172,28 +212,8 @@ const DeleteFarmPlotModal = ({ isOpen, onClose, onConfirm, plot, isLoading = fal
 
           {/* Confirmation Message */}
           <p style={styles.message}>
-            Are you sure you want to delete this farm plot?
+            Are you sure you want to delete this Farm Plot #{getPlotNumber()}?
           </p>
-
-          {/* Plot Information */}
-          <div style={styles.plotInfo}>
-            <div style={styles.plotIcon}>
-              <div style={styles.plotIconText}>🌾</div>
-            </div>
-            <div style={styles.plotDetails}>
-              <div style={styles.plotName}>
-                {plot.plotNumber || `Plot #${plot.id}`}
-              </div>
-              <div style={styles.plotNumber}>
-                <FaRegIdCard size={12} /> {plot.beneficiaryId || 'N/A'}
-              </div>
-              <div style={styles.beneficiaryInfo}>
-                <div><strong>Beneficiary:</strong> {plot.beneficiaryName || 'Unknown'}</div>
-                <div><strong>Address:</strong> {plot.address || 'Not available'}</div>
-                <div><strong>Coordinates:</strong> {plot.coordinates?.length || 0} boundary points</div>
-              </div>
-            </div>
-          </div>
 
           {/* Warning Message */}
           <p style={styles.warning}>
@@ -223,7 +243,7 @@ const DeleteFarmPlotModal = ({ isOpen, onClose, onConfirm, plot, isLoading = fal
                   e.target.style.borderColor = 'var(--gray)';
                 }
               }}
-              disabled={isLoading}
+              disabled={isLoading || isDeleting}
             >
               Cancel
             </button>
@@ -233,20 +253,20 @@ const DeleteFarmPlotModal = ({ isOpen, onClose, onConfirm, plot, isLoading = fal
               style={{
                 ...styles.button,
                 ...styles.deleteButton,
-                opacity: isLoading ? 0.6 : 1,
-                cursor: isLoading ? 'not-allowed' : 'pointer'
+                opacity: (isLoading || isDeleting) ? 0.6 : 1,
+                cursor: (isLoading || isDeleting) ? 'not-allowed' : 'pointer'
               }}
               onMouseEnter={(e) => {
-                if (!isLoading) {
+                if (!isLoading && !isDeleting) {
                   e.target.style.backgroundColor = '#c82333';
                 }
               }}
               onMouseLeave={(e) => {
                 e.target.style.backgroundColor = 'var(--red)';
               }}
-              disabled={isLoading}
+              disabled={isLoading || isDeleting}
             >
-              {isLoading ? 'Deleting...' : 'Delete Plot'}
+              {(isLoading || isDeleting) ? 'Deleting...' : 'Delete Plot'}
             </button>
           </div>
         </div>

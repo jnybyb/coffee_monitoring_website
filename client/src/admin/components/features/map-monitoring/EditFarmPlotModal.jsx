@@ -6,48 +6,52 @@ const modalStyle = {
   left: 0,
   right: 0,
   bottom: 0,
-  background: 'rgba(0,0,0,0.3)',
-  zIndex: 1000,
+  backgroundColor: 'rgba(0, 0, 0, 0.75)',
   display: 'flex',
-  alignItems: 'center',
   justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 1000,
 };
 
 const formStyle = {
-  background: 'white',
-  borderRadius: 12,
-  padding: 28,
-  minWidth: 450,
-  maxWidth: 500,
-  maxHeight: '80vh',
-  boxShadow: '0 2px 16px rgba(0,0,0,0.15)',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 18,
+  backgroundColor: 'white',
+  borderRadius: 8,
+  padding: '0 1rem ',
+  maxWidth: '480px',
+  width: '85%',
+  maxHeight: '90vh',
+  overflowY: 'auto',
+  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
   position: 'relative',
-  overflow: 'auto',
+  scrollbarWidth: 'none',
+  msOverflowStyle: 'none',
 };
 
 const headerStyle = {
-  fontSize: 19,
-  fontWeight: 600,
-  marginBottom: 8,
-  marginTop: 0,
-  textAlign: 'left',
-  borderBottom: '1px solid #e0e0e0',
-  paddingBottom: 12,
-  color: '#2c5530',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  borderBottom: '.5px solid #e9ecef',
+  padding: '1.50rem 1.25rem',
+  background: 'white',
+  position: 'sticky',
+  top: 0,
+  zIndex: 10,
 };
 
 const closeBtnStyle = {
-  position: 'absolute',
-  top: 18,
-  right: 18,
   background: 'none',
   border: 'none',
-  fontSize: 21,
-  color: '#888',
+  fontSize: 30,
+  color: '#6c757d',
   cursor: 'pointer',
+  padding: 0,
+  width: 30,
+  height: 30,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: '50%',
 };
 
 const labelStyle = {
@@ -62,9 +66,15 @@ const inputStyle = {
   padding: '10px 12px',
   borderRadius: 6,
   border: '1px solid #ccc',
-  fontSize: 14,
+  fontSize: 12,
   marginBottom: 0,
   background: 'white',
+};
+
+// Slightly more compact inputs for coordinate fields
+const coordInputBoxStyle = {
+  ...inputStyle,
+  padding: '6px 10px',
 };
 
 const readOnlyInputStyle = {
@@ -72,6 +82,19 @@ const readOnlyInputStyle = {
   background: '#f5f5f5',
   color: '#888',
   cursor: 'not-allowed',
+};
+
+const selectStyle = {
+  ...inputStyle,
+  padding: '10px 32px 10px 12px',
+  appearance: 'none',
+  WebkitAppearance: 'none',
+  MozAppearance: 'none',
+  backgroundImage:
+    "url('data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\' fill=\\'%236c757d\\'><path d=\\'M7 10l5 5 5-5\\'/></svg>')",
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'right 12px center',
+  backgroundSize: '14px',
 };
 
 const buttonRowStyle = {
@@ -96,11 +119,11 @@ const saveBtnStyle = {
   background: '#2d7c4a',
   border: 'none',
   borderRadius: 6,
-  padding: '10px 24px',
+  padding: '8px 16px',
   color: 'white',
   fontWeight: 500,
   cursor: 'pointer',
-  fontSize: 14,
+  fontSize: 12,
 };
 
 const addButtonStyle = {
@@ -144,10 +167,9 @@ const removeButtonStyle = {
 };
 
 const sectionTitleStyle = {
-  fontSize: 14,
+  fontSize: 13,
   fontWeight: 600,
   color: '#2c5530',
-  marginBottom: 8,
   marginTop: 16,
 };
 
@@ -178,6 +200,22 @@ const plotNameInputStyle = {
   color: '#2c5530',
 };
 
+const twoColRowStyle = {
+  display: 'flex',
+  gap: 8,
+};
+
+const twoColColStyle = {
+  flex: 1,
+};
+
+const formBodyStyle = {
+  padding: '1.25rem',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 18,
+};
+
 // Helper function to convert DMS to Decimal Degrees
 const dmsToDecimal = (dmsString) => {
   if (!dmsString) return null;
@@ -203,6 +241,27 @@ const dmsToDecimal = (dmsString) => {
   return decimal;
 };
 
+// Helper function to convert Decimal Degrees to DMS format
+const decimalToDMS = (decimal, isLatitude = true) => {
+  if (decimal === null || decimal === undefined || isNaN(decimal)) return '';
+  
+  const absDecimal = Math.abs(decimal);
+  const degrees = Math.floor(absDecimal);
+  const minutesDecimal = (absDecimal - degrees) * 60;
+  const minutes = Math.floor(minutesDecimal);
+  const seconds = (minutesDecimal - minutes) * 60;
+  
+  // Determine direction
+  let direction = '';
+  if (isLatitude) {
+    direction = decimal >= 0 ? 'N' : 'S';
+  } else {
+    direction = decimal >= 0 ? 'E' : 'W';
+  }
+  
+  return `${degrees}°${minutes}'${seconds.toFixed(1)}"${direction}`;
+};
+
 // Helper function to detect coordinate format
 const detectCoordinateFormat = (coordString) => {
   if (!coordString) return 'decimal';
@@ -221,8 +280,41 @@ const detectCoordinateFormat = (coordString) => {
   return 'unknown';
 };
 
-function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isLoading = false }) {
-  const [plotNumber, setPlotNumber] = useState('');
+// Helper to format address safely without showing "undefined"
+const formatSelectedAddress = (beneficiary) => {
+  if (!beneficiary) return '';
+  if (beneficiary.address) return beneficiary.address;
+  const parts = [beneficiary.purok, beneficiary.barangay, beneficiary.municipality, beneficiary.province]
+    .filter(Boolean)
+    .map(part => String(part).trim())
+    .filter(part => part.length > 0);
+  return parts.join(', ');
+};
+
+// Helper function to extract plot number
+const getPlotNumber = (plot, plotIndex) => {
+  // If plotIndex is provided, use it to calculate plot number (index + 1)
+  if (plotIndex !== undefined && plotIndex !== null) {
+    return plotIndex + 1;
+  }
+  
+  // Fallback to existing logic
+  if (plot.plotNumber) {
+    // If plotNumber already contains "Plot #", extract just the number
+    const match = String(plot.plotNumber).match(/Plot\s*#?\s*(\d+)/i);
+    if (match) {
+      return match[1];
+    }
+    // If it's just a number or other format, return as is
+    return plot.plotNumber;
+  }
+  if (plot.id) {
+    return plot.id;
+  }
+  return '1';
+};
+
+function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isLoading = false, plotIndex }) {
   const [selectedId, setSelectedId] = useState('');
   const [coordinates, setCoordinates] = useState([
     { lat: '', lng: '' },
@@ -230,6 +322,7 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isL
     { lat: '', lng: '' }
   ]);
   const [errors, setErrors] = useState({});
+  
 
   // Find selected beneficiary object
   const selected = beneficiaries?.find(b => b.beneficiaryId === selectedId || b.id === selectedId) || {};
@@ -237,14 +330,13 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isL
   // Initialize form data when plot changes
   useEffect(() => {
     if (plot && isOpen) {
-      setPlotNumber(plot.plotNumber || '');
       setSelectedId(plot.beneficiaryId || '');
       
-      // Initialize coordinates from existing plot data
+      // Initialize coordinates from existing plot data in DMS format
       if (plot.coordinates && Array.isArray(plot.coordinates)) {
         const plotCoordinates = plot.coordinates.map(coord => ({
-          lat: coord.lat?.toString() || '',
-          lng: coord.lng?.toString() || ''
+          lat: decimalToDMS(coord.lat, true) || '',
+          lng: decimalToDMS(coord.lng, false) || ''
         }));
         
         // Ensure minimum 3 coordinates
@@ -268,7 +360,6 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isL
   // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setPlotNumber('');
       setSelectedId('');
       setCoordinates([
         { lat: '', lng: '' },
@@ -339,16 +430,12 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isL
     return validCoordinates;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (isLoading) return; // Prevent submission while loading
     
     const newErrors = {};
-    
-    if (!plotNumber.trim()) {
-      newErrors.plotNumber = 'Plot number is required';
-    }
     
     if (!selectedId) {
       newErrors.selectedId = 'Beneficiary is required';
@@ -367,9 +454,13 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isL
       // Convert and validate all coordinates
       const convertedCoordinates = validateAndConvertCoordinates(validCoordinates);
       
-      onSubmit({
+      // Close modal immediately and let parent handle loading/success
+      onClose();
+      
+      // Call the onSubmit function (parent will handle loading and success)
+      await onSubmit({
         id: plot.id, // Keep the original plot ID
-        plotNumber: plotNumber.trim(),
+        plotNumber: plot.plotNumber, // Keep the existing plot number
         beneficiaryId: selected.beneficiaryId || selected.id,
         fullName: selected.fullName || selected.name,
         address: selected.address,
@@ -377,9 +468,9 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isL
         color: plot.color, // Keep the original color
       });
       
-      onClose();
     } catch (error) {
-      newErrors.coordinates = error.message;
+      // If there's an error, show it in the modal
+      newErrors.coordinates = error.message || 'Failed to update farm plot';
       setErrors(newErrors);
     }
   };
@@ -388,141 +479,132 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isL
 
   return (
     <div style={modalStyle}>
-      <form style={formStyle} onSubmit={handleSubmit}>
-        <button type="button" style={closeBtnStyle} onClick={onClose} aria-label="Close">×</button>
-        <div style={headerStyle}>Edit Farm Plot</div>
-        
-        {/* Plot Number */}
-        <div>
-          <label style={labelStyle}>Plot Number</label>
-          <input
-            style={plotNameInputStyle}
-            type="text"
-            value={plotNumber}
-            onChange={e => setPlotNumber(e.target.value)}
-            placeholder="Enter plot number"
-            required
-          />
-          {errors.plotNumber && <div style={{ color: '#c00', fontSize: 12 }}>{errors.plotNumber}</div>}
-        </div>
-
-        {/* Beneficiary Selection */}
-        <div>
-          <label style={labelStyle}>Beneficiary Full Name</label>
-          <select
-            style={inputStyle}
-            value={selectedId}
-            onChange={e => setSelectedId(e.target.value)}
-            required
+      <form style={formStyle} onSubmit={handleSubmit} className="hide-scrollbar-modal">
+        {/* Modal Header */}
+        <div style={headerStyle}>
+          <h2 style={{ color: 'var(--black)', margin: 0, fontSize: '1.4rem', fontWeight: 600 }}>Edit Farm Plot #{getPlotNumber(plot, plotIndex)}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            style={closeBtnStyle}
+            aria-label="Close"
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
           >
-            <option value="">Select beneficiary</option>
-            {beneficiaries?.map(b => (
-              <option key={b.beneficiaryId || b.id} value={b.beneficiaryId || b.id}>
-                {b.fullName || b.name || `${b.firstName || ''} ${b.middleName || ''} ${b.lastName || ''}`.trim()}
-              </option>
-            ))}
-          </select>
-          {errors.selectedId && <div style={{ color: '#c00', fontSize: 12 }}>{errors.selectedId}</div>}
+            ×
+          </button>
         </div>
 
-        {/* Beneficiary ID (Read-only) */}
-        <div>
-          <label style={labelStyle}>Beneficiary ID</label>
-          <input
-            style={readOnlyInputStyle}
-            value={selected.beneficiaryId || selected.id || ''}
-            readOnly
-            tabIndex={-1}
-          />
-        </div>
+        <div style={formBodyStyle}>
+          {/* Beneficiary Selection and ID in one row */}
+          <div style={twoColRowStyle}>
+            <div style={twoColColStyle}>
+              <label style={labelStyle}>Beneficiary Full Name</label>
+              <select
+                style={selectStyle}
+                value={selectedId}
+                onChange={e => setSelectedId(e.target.value)}
+                required
+              >
+                <option value="">Select beneficiary</option>
+                {beneficiaries?.map(b => (
+                  <option key={b.beneficiaryId || b.id} value={b.beneficiaryId || b.id}>
+                    {b.fullName || b.name || `${b.firstName || ''} ${b.middleName || ''} ${b.lastName || ''}`.trim()}
+                  </option>
+                ))}
+              </select>
+              {errors.selectedId && <div style={{ color: '#c00', fontSize: 12 }}>{errors.selectedId}</div>}
+            </div>
+            <div style={twoColColStyle}>
+              <label style={labelStyle}>Beneficiary ID</label>
+              <input
+                style={readOnlyInputStyle}
+                value={selected.beneficiaryId || selected.id || ''}
+                readOnly
+                tabIndex={-1}
+              />
+            </div>
+          </div>
 
-        {/* Address (Read-only) */}
-        <div>
-          <label style={labelStyle}>Address</label>
-          <input
-            style={readOnlyInputStyle}
-            value={selected.address || `${selected.purok || ''}, ${selected.barangay || ''}, ${selected.municipality || ''}, ${selected.province || ''}`.replace(/^,\s*/, '').replace(/,\s*,/g, ',') || ''}
-            readOnly
-            tabIndex={-1}
-          />
-        </div>
+          {/* Address (Read-only) */}
+          <div>
+            <label style={labelStyle}>Address</label>
+            <input
+              style={readOnlyInputStyle}
+              value={formatSelectedAddress(selected)}
+              readOnly
+              tabIndex={-1}
+            />
+          </div>
 
-        {/* Plot Boundary Coordinates */}
-        <div>
-          <div style={sectionTitleStyle}>Plot Boundary Coordinates</div>
-          <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
-            Edit coordinate points to define the plot boundary. Minimum 3 points required.
-            <br />
-            <strong>Supported formats:</strong>
-            <br />
-            • Decimal: 7.2167, 126.3333
-            <br />
-            • DMS: 7°15'20.4"N, 126°20'36.5"E
-          </p>
-          
-          {coordinates.map((coord, index) => (
-            <div key={index} style={coordinateRowStyle}>
-              <div style={coordinateInputStyle}>
-                <div style={pointTitleStyle}>Point {index + 1}</div>
-                <div style={coordinateFieldsStyle}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ ...labelStyle, fontSize: 11 }}>Latitude</label>
-                    <input
-                      style={inputStyle}
-                      type="text"
-                      value={coord.lat}
-                      onChange={e => updateCoordinate(index, 'lat', e.target.value)}
-                      placeholder=" "
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ ...labelStyle, fontSize: 11 }}>Longitude</label>
-                    <input
-                      style={inputStyle}
-                      type="text"
-                      value={coord.lng}
-                      onChange={e => updateCoordinate(index, 'lng', e.target.value)}
-                      placeholder=" "
-                    />
+          {/* Plot Boundary Coordinates */}
+          <div>
+            <div style={sectionTitleStyle}>Plot Boundary Coordinates</div>
+            <p style={{ fontSize: 10, color: '#666', marginBottom: 15 }}>
+              Edit coordinate points to define the plot boundary. Minimum 3 points required.
+            </p>
+            {coordinates.map((coord, index) => (
+              <div key={index} style={coordinateRowStyle}>
+                <div style={coordinateInputStyle}>
+                  <div style={pointTitleStyle}>Point {index + 1}</div>
+                  <div style={coordinateFieldsStyle}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ ...labelStyle, fontSize: 11 }}>Latitude</label>
+                      <input
+                        style={coordInputBoxStyle}
+                        type="text"
+                        value={coord.lat}
+                        onChange={e => updateCoordinate(index, 'lat', e.target.value)}
+                        placeholder="7°15'20.4&quot;N"
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ ...labelStyle, fontSize: 11 }}>Longitude</label>
+                      <input
+                        style={coordInputBoxStyle}
+                        type="text"
+                        value={coord.lng}
+                        onChange={e => updateCoordinate(index, 'lng', e.target.value)}
+                        placeholder="126°20'36.5&quot;E"
+                      />
+                    </div>
                   </div>
                 </div>
+                {coordinates.length > 3 && (
+                  <button
+                    type="button"
+                    style={removeButtonStyle}
+                    onClick={() => removeCoordinate(index)}
+                    title="Remove coordinate"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
-              {coordinates.length > 3 && (
-                <button
-                  type="button"
-                  style={removeButtonStyle}
-                  onClick={() => removeCoordinate(index)}
-                  title="Remove coordinate"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          ))}
-          
-          <button type="button" style={addButtonStyle} onClick={addCoordinate}>
-            + Add Coordinate Point
-          </button>
-          
-          {errors.coordinates && <div style={{ color: '#c00', fontSize: 12, marginTop: 8 }}>{errors.coordinates}</div>}
-        </div>
+            ))}
+            <button type="button" style={addButtonStyle} onClick={addCoordinate}>
+              + Add Coordinate Point
+            </button>
+            {errors.coordinates && <div style={{ color: '#c00', fontSize: 12, marginTop: 8 }}>{errors.coordinates}</div>}
+          </div>
 
-        {/* Action Buttons */}
-        <div style={buttonRowStyle}>
-          <button type="button" style={cancelBtnStyle} onClick={onClose} disabled={isLoading}>
-            Cancel
-          </button>
-          <button 
-            type="submit" 
-            style={{ 
-              ...saveBtnStyle, 
-              opacity: isLoading ? 0.6 : 1,
-              cursor: isLoading ? 'not-allowed' : 'pointer'
-            }} 
-            disabled={isLoading}
-          >
-            {isLoading ? 'Updating...' : 'Update Plot'}
-          </button>
+          {/* Action Buttons */}
+          <div style={{ ...buttonRowStyle, paddingTop: '1rem', borderTop: '1px solid #e9ecef' }}>
+            <button type="button" style={cancelBtnStyle} onClick={onClose} disabled={isLoading}>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              style={{
+                ...saveBtnStyle,
+                opacity: isLoading ? 0.6 : 1,
+                cursor: isLoading ? 'not-allowed' : 'pointer'
+              }}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Updating...' : 'Update Plot'}
+            </button>
+          </div>
         </div>
       </form>
     </div>
@@ -530,3 +612,15 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isL
 }
 
 export default EditFarmPlotModal;
+
+<style>
+{`
+.hide-scrollbar-modal::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar-modal {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+`}
+</style>

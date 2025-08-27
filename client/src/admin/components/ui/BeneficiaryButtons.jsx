@@ -1,4 +1,5 @@
 import React from 'react';
+import { CiImport } from 'react-icons/ci';
 
 // Button component that matches the interface expected by the importing components
 const Button = ({ 
@@ -510,6 +511,20 @@ export const ConfirmButton = ({ onClick, disabled, style }) => (
     onClick={onClick}
     disabled={disabled}
     style={style}
+  />
+);
+
+// New: Import button used in Map Monitoring (white background, green outline)
+export const ImportButton = ({ onClick, disabled, style, text = 'Import Excel' }) => (
+  <BeneficiaryButtons
+    buttonType="custom"
+    customText={text}
+    customIcon={<CiImport size={16} />}
+    customType="outline"
+    customSize="medium"
+    onClick={onClick}
+    disabled={disabled}
+    style={{ fontWeight: '500', ...style }}
   />
 );
 

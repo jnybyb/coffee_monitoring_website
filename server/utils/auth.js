@@ -5,12 +5,25 @@ const BaseController = require('../controllers/baseController');
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key';
 const JWT_EXPIRES_IN = '7d';
 
+// Server startup timestamp - this will invalidate all existing tokens when server restarts
+const SERVER_STARTUP_TIME = Date.now();
+
 const signToken = (payload) => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign({
+    ...payload,
+    serverStartup: SERVER_STARTUP_TIME
+  }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 };
 
 const verifyToken = (token) => {
-  return jwt.verify(token, JWT_SECRET);
+  const decoded = jwt.verify(token, JWT_SECRET);
+  
+  // Check if token was issued before current server startup
+  if (decoded.serverStartup !== SERVER_STARTUP_TIME) {
+    throw new Error('Token invalid - server restarted');
+  }
+  
+  return decoded;
 };
 
 const authenticate = (req, res, next) => {
@@ -22,6 +35,9 @@ const authenticate = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
+    if (error.message === 'Token invalid - server restarted') {
+      return BaseController.sendUnauthorized(res, 'Session expired - please login again');
+    }
     return BaseController.sendUnauthorized(res, 'Invalid or expired token');
   }
 };
@@ -38,12 +54,31 @@ const findAdminByUsername = async (username) => {
   return rows[0] || null;
 };
 
+const logLoginAttempt = async (adminUserId, success, failureReason = null, req = null) => {
+  try {
+    const ipAddress = req ? req.ip || req.connection.remoteAddress : null;
+    const userAgent = req ? req.get('User-Agent') : null;
+
+    await getPromisePool().query(
+      'INSERT INTO admin_login_logs (admin_user_id, ip_address, user_agent, success, failure_reason) VALUES (?, ?, ?, ?, ?)',
+      [adminUserId, ipAddress, userAgent, success, failureReason]
+    );
+  } catch (error) {
+    console.error('Error logging login attempt:', error.message);
+  }
+};
+
+// Export server startup time for potential client-side use
+const getServerStartupTime = () => SERVER_STARTUP_TIME;
+
 module.exports = {
   signToken,
   verifyToken,
   authenticate,
   requireAdmin,
-  findAdminByUsername
+  findAdminByUsername,
+  logLoginAttempt,
+  getServerStartupTime
 };
 
 

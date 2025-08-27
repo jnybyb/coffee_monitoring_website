@@ -2,13 +2,28 @@ CREATE DATABASE IF NOT EXISTS coffee_monitoring;
 
 USE coffee_monitoring;
 
--- Admin users for authentication and authorization
+-- Admin users table for authentication and authorization
 CREATE TABLE IF NOT EXISTS admins (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(100) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('admin') NOT NULL DEFAULT 'admin',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Admin login logs table for tracking authentication activities
+CREATE TABLE IF NOT EXISTS admin_login_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  admin_user_id INT NOT NULL,
+  login_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  ip_address VARCHAR(45) NULL,
+  user_agent TEXT NULL,
+  success BOOLEAN NOT NULL DEFAULT TRUE,
+  failure_reason VARCHAR(255) NULL,
+  INDEX idx_admin_login_logs_admin_user_id (admin_user_id),
+  INDEX idx_admin_login_logs_login_timestamp (login_timestamp),
+  INDEX idx_admin_login_logs_success (success),
+  FOREIGN KEY (admin_user_id) REFERENCES admins(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS beneficiary_details (

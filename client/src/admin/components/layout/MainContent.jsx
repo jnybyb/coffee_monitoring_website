@@ -14,6 +14,9 @@ const MainContent = ({ children }) => {
     flexDirection: 'column',
     boxSizing: 'border-box',
     minHeight: 0,
+    marginTop: '0.5rem',
+    marginRight: '0.5rem',
+    marginBottom: '0.5rem',
   };
 
   // Content wrapper for proper flex distribution

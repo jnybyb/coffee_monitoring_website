@@ -13,7 +13,7 @@ const AlertModal = ({
   onCancel,
   autoClose = false,
   autoCloseDelay = 3000,
-  maxWidth = 380
+  maxWidth = 320
 }) => {
   React.useEffect(() => {
     if (isOpen && autoClose && !showCancel) {
@@ -105,7 +105,7 @@ const AlertModal = ({
       <div
         style={{
           backgroundColor: 'white',
-          borderRadius: '10px',
+          borderRadius: '6px',
           maxWidth: `${maxWidth}px`,
           width: '100%',
           boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
@@ -168,16 +168,18 @@ const AlertModal = ({
             {title}
           </h3>
 
-          <div style={{
-            marginBottom: '30px',
-            color: config.textColor,
-            fontSize: '14px',
-            lineHeight: '1.5',
-            textAlign: 'center',
-            fontFamily: 'var(--font-main), Arial, sans-serif'
-          }}>
-            {message}
-          </div>
+          {message ? (
+            <div style={{
+              marginBottom: '30px',
+              color: config.textColor,
+              fontSize: '14px',
+              lineHeight: '1.5',
+              textAlign: 'center',
+              fontFamily: 'var(--font-main), Arial, sans-serif'
+            }}>
+              {message}
+            </div>
+          ) : null}
 
           {showCancel && (
             <div style={{

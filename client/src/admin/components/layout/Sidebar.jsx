@@ -123,24 +123,24 @@ const Sidebar = () => {
     background: 'var(--dark-green)',
     color: 'var(--white)',
     boxSizing: 'border-box',
-    padding: '1.6rem 0.3rem',
+    padding: '2.5rem 0.5rem',
     fontFamily: 'var(--font-main)',
     fontWeight: 400,
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
+    alignItems: 'stretch',
     flex: 1,
     minHeight: 0,
-    marginTop: '-0.3rem',
   };
 
   // Navigation container styles
   const navStyles = {
-    width: '100%', 
-    padding: '0 0.5rem', 
-    flex: 1, 
-    display: 'flex', 
-    flexDirection: 'column' 
+    width: '100%',
+    padding: '0 0.25rem',
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    overflowY: 'auto',
   };
 
   const navListStyles = {
@@ -151,11 +151,11 @@ const Sidebar = () => {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
+    gap: '0.6rem',
   };
 
   const listItemStyles = {
-    marginBottom: '.75rem', 
-    width: '100%' 
+    width: '100%'
   };
 
   return (

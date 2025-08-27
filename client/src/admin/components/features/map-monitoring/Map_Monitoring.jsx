@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, ScaleControl, Polygon } from 'react-leaflet';
+import { FaRegIdCard } from 'react-icons/fa';
+import { FaLocationDot } from 'react-icons/fa6';
+import { LuLandPlot } from 'react-icons/lu';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { beneficiariesAPI, farmPlotsAPI } from '../../../services/api';
 import AddFarmPlotModal from './AddFarmPlotModal';
 import EditFarmPlotModal from './EditFarmPlotModal';
-import AlertModal from '../../ui/AlertModal';
 import ViewFarmPlotModal from './ViewFarmPlotModal';
 import DeleteFarmPlotModal from './DeleteFarmPlotModal';
+import { ImportButton } from '../../ui/BeneficiaryButtons';
+import { RiAddLargeFill } from 'react-icons/ri';
+import AlertModal from '../../ui/AlertModal';
+import LoadingModal from '../../ui/LoadingModal';
 
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -147,18 +153,23 @@ const MapMonitoring = () => {
   const [beneficiaries, setBeneficiaries] = useState([]);
   const [farmPlots, setFarmPlots] = useState([]); // Store farm plots data
   const [isCreatingPlot, setIsCreatingPlot] = useState(false); // Loading state for plot creation
-  const [showSuccessModal, setShowSuccessModal] = useState(false); // Success modal state
-  const [successMessage, setSuccessMessage] = useState(''); // Success message for modal
-  const [currentMapLayer, setCurrentMapLayer] = useState('satellite'); // Current map layer
+  
+  const [currentMapLayer, setCurrentMapLayer] = useState('street'); // Current map layer (Default)
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedPlot, setSelectedPlot] = useState(null);
   const [selectedPlotIndex, setSelectedPlotIndex] = useState(null);
 
+  // Success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [loadingMessage, setLoadingMessage] = useState('Please wait while we update your farm data.');
+  const [loadingTitle, setLoadingTitle] = useState('Updating...');
+
   const styles = {
     container: {
-      padding: '1rem',
+      padding: '1.5rem',
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
@@ -168,9 +179,9 @@ const MapMonitoring = () => {
       overflow: 'hidden'
     },
     detailsPanel: {
-      width: '280px',
-      minWidth: '260px',
-      maxWidth: '300px',
+      width: '360px',
+      minWidth: '320px',
+      maxWidth: '420px',
       display: 'flex',
       flexDirection: 'column',
       gap: '0.5rem',
@@ -187,14 +198,15 @@ const MapMonitoring = () => {
       overflow: 'hidden'
     },
     title: {
-      color: 'var(--forest-color)',
-      fontSize: '1.25rem',
+      color: '#2c5530',
+      fontSize: '1.4rem',
       fontWeight: '700',
-      marginBottom: '1rem'
+      marginBottom: '0.2rem'
     },
     subtitle: {
       color: '#6c757d',
-      fontSize: '0.9rem'
+      fontSize: '0.60rem',
+      margin: '0'
     },
     infoPanel: {
       backgroundColor: 'white',
@@ -225,13 +237,13 @@ const MapMonitoring = () => {
       gap: '0.75rem'
     },
     controlButton: {
-      padding: '0.875rem 1.25rem',
+      padding: '0.5rem 1.25rem',
       backgroundColor: '#2d7c4a',
       color: 'white',
       border: 'none',
-      borderRadius: '8px',
+      borderRadius: '7px',
       cursor: 'pointer',
-      fontSize: '0.9rem',
+      fontSize: '0.7rem',
       fontWeight: '500',
       transition: 'background-color 0.2s',
       width: '100%'
@@ -252,35 +264,68 @@ const MapMonitoring = () => {
     },
     mapLayerControls: {
       position: 'absolute',
-      bottom: '64px', // sit above Leaflet attribution like Google Maps
-      right: '20px',
-      backgroundColor: 'white',
-      borderRadius: '8px',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
-      border: '1px solid #dadce0',
+      bottom: '15px', // sit above Leaflet attribution like Google Maps
+      right: '5px',
       zIndex: 1000,
       padding: '0',
       overflow: 'hidden'
     },
-    mapLayerOptions: {
-      display: 'flex',
-      gap: '0'
+    // New image-tile based map type controls
+    mapTypeContainer: {
+      padding: '7px',
+      width: '180px'
     },
-    mapLayerButton: {
-      border: 'none',
-      backgroundColor: 'transparent',
+    mapTypeTitle: {
+      fontSize: '6px',
+      color: '#5f6368',
+      marginBottom: '4px'
+    },
+    mapTypeOptions: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3, 1fr)',
+      gap: '5px'
+    },
+    mapTypeItem: {
+      border: '2px solid transparent',
+      borderRadius: '7px',
+      overflow: 'hidden',
       cursor: 'pointer',
-      display: 'block',
-      padding: '8px 12px',
-      margin: '0',
-      fontSize: '12px',
-      color: '#5f6368'
+      backgroundColor: '#fff',
+      boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+      transition: 'border-color 0.2s, box-shadow 0.2s',
+      position: 'relative'
     },
-    mapLayerButtonActive: {
-      border: 'none',
-      backgroundColor: '#e8f0fe',
-      color: '#1a73e8',
-      fontWeight: '600'
+    mapTypeGradient: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: '22px',
+      background: 'linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0))',
+      pointerEvents: 'none'
+    },
+    mapTypeItemSelected: {
+      border: '2px solid #1a73e8',
+      boxShadow: '0 0 0 2px rgba(26,115,232,0.15)'
+    },
+    mapTypeImage: {
+      width: '100%',
+      height: '48px',
+      display: 'block',
+      objectFit: 'cover'
+    },
+    mapTypeLabel: {
+      position: 'absolute',
+      left: '50%',
+      bottom: '6px',
+      transform: 'translateX(-50%)',
+      color: '#ffffff',
+      padding: '0 3px',
+      borderRadius: '10px',
+      fontSize: '9.5px',
+      fontWeight: '400',
+      lineHeight: '1',
+      pointerEvents: 'none'
     },
     // removed icon-based controls in favor of text buttons like Google Maps
     statsPanel: {
@@ -466,6 +511,8 @@ const MapMonitoring = () => {
     if (isCreatingPlot) return; // Prevent multiple submissions
     
     try {
+      setLoadingTitle('Plotting...');
+      setLoadingMessage('Please wait while we plot your farm.');
       setIsCreatingPlot(true);
       console.log('Creating farm plot with data:', data);
       
@@ -478,6 +525,9 @@ const MapMonitoring = () => {
       };
 
       console.log('Sending farm plot data to server:', farmPlotData);
+      
+      const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+      const startTime = Date.now();
       
       // Save to backend
       const newPlot = await farmPlotsAPI.create(farmPlotData);
@@ -498,14 +548,20 @@ const MapMonitoring = () => {
       setFarmPlots(updatedPlots);
       console.log('Added farm plot with boundaries and corner markers:', newPlot);
       
-      // Show success modal
-      setSuccessMessage('Farm Plot has been created successfully.');
+      // Ensure minimum 2 seconds of loading
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 2000) {
+        await sleep(2000 - elapsed);
+      }
+      
+      // Close loading and show success modal
+      setIsCreatingPlot(false);
+      setSuccessMessage('Farm plot added successfully!');
       setShowSuccessModal(true);
       
     } catch (error) {
       console.error('Error creating farm plot:', error);
       alert('Failed to create farm plot: ' + (error.message || 'Unknown error'));
-    } finally {
       setIsCreatingPlot(false);
     }
   };
@@ -515,6 +571,8 @@ const MapMonitoring = () => {
     if (isCreatingPlot) return; // Prevent multiple submissions
     
     try {
+      setLoadingTitle('Updating...');
+      setLoadingMessage('Please wait while we update your farm data.');
       setIsCreatingPlot(true);
       console.log('Updating farm plot with data:', data);
       
@@ -528,6 +586,9 @@ const MapMonitoring = () => {
       };
 
       console.log('Sending updated farm plot data to server:', farmPlotData);
+      
+      const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+      const startTime = Date.now();
       
       // Update in backend
       const updatedPlot = await farmPlotsAPI.update(data.id, farmPlotData);
@@ -547,14 +608,20 @@ const MapMonitoring = () => {
       setFarmPlots(updatedPlots);
       console.log('Updated farm plot:', updatedPlot);
       
-      // Show success modal
-      setSuccessMessage('Farm Plot has been updated successfully.');
+      // Ensure minimum 2 seconds of loading
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 2000) {
+        await sleep(2000 - elapsed);
+      }
+      
+      // Close loading and show success modal
+      setIsCreatingPlot(false);
+      setSuccessMessage('Farm plot updated successfully!');
       setShowSuccessModal(true);
       
     } catch (error) {
       console.error('Error updating farm plot:', error);
       alert('Failed to update farm plot: ' + (error.message || 'Unknown error'));
-    } finally {
       setIsCreatingPlot(false);
     }
   };
@@ -575,8 +642,13 @@ const MapMonitoring = () => {
   // Handle delete from View modal
   const handleDeletePlot = async (plot, index) => {
     try {
+      setLoadingTitle('Deleting...');
+      setLoadingMessage('Please wait while we delete your farm plot.');
       setIsCreatingPlot(true);
       console.log('Deleting farm plot:', plot);
+      
+      const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+      const startTime = Date.now();
       
       // Delete from backend
       await farmPlotsAPI.delete(plot.id);
@@ -586,14 +658,20 @@ const MapMonitoring = () => {
       setShowViewModal(false);
       setShowDeleteModal(false); // Close delete modal after successful deletion
       
-      // Show success message
-      setSuccessMessage('Farm Plot has been deleted successfully.');
+      // Ensure minimum 2 seconds of loading
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 2000) {
+        await sleep(2000 - elapsed);
+      }
+      
+      // Close loading and show success modal
+      setIsCreatingPlot(false);
+      setSuccessMessage('Farm plot deleted successfully!');
       setShowSuccessModal(true);
       
     } catch (error) {
       console.error('Error deleting farm plot:', error);
       alert('Failed to delete farm plot: ' + (error.message || 'Unknown error'));
-    } finally {
       setIsCreatingPlot(false);
     }
   };
@@ -628,8 +706,11 @@ const MapMonitoring = () => {
       </style>
       <div style={styles.container}>
       {/* Header Section */}
-      <div>
-        <h2 style={styles.title}>Map Monitoring</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div>
+          <h2 style={styles.title}>Map Monitoring</h2>
+          <p style={styles.subtitle}>Farm plot locations and boundary monitoring</p>
+        </div>
       </div>
       {/* Map and Details Section */}
       <div style={{ 
@@ -716,60 +797,47 @@ const MapMonitoring = () => {
                         icon={createLocationMarkerIcon(plot.beneficiaryPicture, plot.beneficiaryName, plot.color)}
                       >
                         <Popup>
-                          <div style={{ minWidth: '250px' }}>
+                          <div style={{ minWidth: '260px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{ 
-                              borderBottom: '2px solid #2d7c4a', 
-                              paddingBottom: '8px', 
-                              marginBottom: '8px' 
-                            }}>
-                              <b style={{ color: '#2d7c4a', fontSize: '16px' }}>
-                                {plot.beneficiaryName}
-                              </b>
-                            </div>
-                            <div style={{ fontSize: '13px', color: '#666', lineHeight: '1.4' }}>
-                              <div style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '12px', 
-                                marginBottom: '12px' 
-                              }}>
-                                <div style={{
-                                  width: '48px',
-                                  height: '48px',
-                                  backgroundColor: '#f8f9fa',
+                                width: '50px',
+                                height: '50px',
+                                backgroundColor: '#f1f3f5',
                                   borderRadius: '50%',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
                                   color: '#6c757d',
-                                  fontSize: '18px',
+                                fontSize: '12px',
                                   fontWeight: 'bold',
-                                  border: '3px solid #e8f5e8',
-                                  overflow: 'hidden'
+                                overflow: 'hidden',
+                                flexShrink: 0
                                 }}>
                                   {plot.beneficiaryPicture ? (
                                     <img 
                                       src={`http://localhost:5000${plot.beneficiaryPicture}`} 
                                       alt="Profile" 
-                                      style={{ 
-                                        width: '100%', 
-                                        height: '100%', 
-                                        objectFit: 'cover'
-                                      }}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                     />
                                   ) : (
-                                    plot.beneficiaryName ? 
-                                      plot.beneficiaryName.split(' ').map(word => word.charAt(0)).join('').toUpperCase().slice(0, 2) : 
-                                      '??'
+                                  plot.beneficiaryName ? plot.beneficiaryName.split(' ').map(w => w.charAt(0)).join('').toUpperCase().slice(0, 2) : '??'
                                   )}
                                 </div>
-                                <div>
-                                  <div style={{ marginBottom: '6px' }}>
-                                    <span style={{ fontWeight: '500', color: '#343a40' }}>Beneficiary ID:</span> {plot.beneficiaryId}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ fontWeight: 700, color: '#2d7c4a', fontSize: '12px' }}>
+                                  {plot.beneficiaryName || 'Unknown Beneficiary'}
                                   </div>
-                                  <div>
-                                    <span style={{ fontWeight: '500', color: '#343a40' }}>Address:</span> {plot.address}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#495057', fontSize: '10px' }}>
+                                  <FaRegIdCard size={11} />
+                                  <span>{plot.beneficiaryId || 'N/A'}</span>
                                   </div>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#495057', fontSize: '10px' }}>
+                                  <FaLocationDot size={11} style={{ marginTop: '1px' }} />
+                                  <span>{plot.address || 'Address not available'}</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#495057', fontSize: '10px' }}>
+                                  <LuLandPlot size={11} />
+                                  <span>{`Plot #${(String(plot.plotNumber || '').match(/\d+/) || [])[0] || (index + 1)}`}</span>
                                 </div>
                               </div>
                             </div>
@@ -784,54 +852,91 @@ const MapMonitoring = () => {
               <ScaleControl />
             </MapContainer>
             
-            {/* Map Layer Controls - Google Maps like segmented control */}
+            {/* Map Type controls */}
             <div style={styles.mapLayerControls}>
-              <div style={styles.mapLayerOptions}>
-                <button
-                  style={{
-                    ...styles.mapLayerButton,
-                    ...(currentMapLayer === 'satellite' ? styles.mapLayerButtonActive : {}),
-                    borderRight: '1px solid #dadce0'
-                  }}
-                  onClick={() => setCurrentMapLayer('satellite')}
-                  title="Satellite"
-                >
-                  Satellite
-                </button>
-                <button
-                  style={{
-                    ...styles.mapLayerButton,
-                    ...(currentMapLayer === 'terrain' ? styles.mapLayerButtonActive : {}),
-                    borderRight: '1px solid #dadce0'
-                  }}
-                  onClick={() => setCurrentMapLayer('terrain')}
-                  title="Terrain"
-                >
-                  Terrain
-                </button>
-                <button
-                  style={{
-                    ...styles.mapLayerButton,
-                    ...(currentMapLayer === 'street' ? styles.mapLayerButtonActive : {}),
-                  }}
-                  onClick={() => setCurrentMapLayer('street')}
-                  title="Street"
-                >
-                  Street
-                </button>
+              <div style={styles.mapTypeContainer}>
+                <div style={styles.mapTypeOptions}>
+                  <div
+                    role="button"
+                    onClick={() => setCurrentMapLayer('street')}
+                    style={{
+                      ...styles.mapTypeItem,
+                      ...(currentMapLayer === 'street' ? styles.mapTypeItemSelected : {})
+                    }}
+                    title="Default"
+                  >
+                    <img
+                      style={styles.mapTypeImage}
+                      src="https://tile.openstreetmap.org/6/33/23.png"
+                      alt="Default"
+                    />
+                    <div style={styles.mapTypeGradient}></div>
+                    <div style={styles.mapTypeLabel}>Default</div>
+                  </div>
+                  <div
+                    role="button"
+                    onClick={() => setCurrentMapLayer('satellite')}
+                    style={{
+                      ...styles.mapTypeItem,
+                      ...(currentMapLayer === 'satellite' ? styles.mapTypeItemSelected : {})
+                    }}
+                    title="Satellite"
+                  >
+                    <img
+                      style={styles.mapTypeImage}
+                      src="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/6/23/33"
+                      alt="Satellite"
+                    />
+                    <div style={styles.mapTypeGradient}></div>
+                    <div style={styles.mapTypeLabel}>Satellite</div>
+                  </div>
+                  <div
+                    role="button"
+                    onClick={() => setCurrentMapLayer('terrain')}
+                    style={{
+                      ...styles.mapTypeItem,
+                      ...(currentMapLayer === 'terrain' ? styles.mapTypeItemSelected : {})
+                    }}
+                    title="Terrain"
+                  >
+                    <img
+                      style={styles.mapTypeImage}
+                      src="https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/6/23/33"
+                      alt="Terrain"
+                    />
+                    <div style={styles.mapTypeGradient}></div>
+                    <div style={styles.mapTypeLabel}>Terrain</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
         {/* Details Panel */}
         <div style={styles.detailsPanel}>
-          {/* Add Farm Plot Button at the top */}
-          <button 
-            style={{ ...styles.controlButton, width: '100%', marginBottom: '0.5rem' }}
-            onClick={() => setShowAddModal(true)}
-          >
-            Add Farm Plot
-          </button>
+          {/* Top controls: Add + Import side-by-side */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <div style={{ width: '100%' }}>
+              <ImportButton 
+                onClick={() => {/* hook up import modal/flow here */}}
+                style={{ 
+                  width: '100%', 
+                  padding: '0.5rem 1.25rem',
+                  fontSize: '0.7rem',
+                  borderRadius: '7px'
+                }}
+              />
+            </div>
+            <button 
+              style={{ ...styles.controlButton, width: '100%' }}
+              onClick={() => setShowAddModal(true)}
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <RiAddLargeFill size={12} />
+                <span>Add Farm Plot</span>
+              </span>
+            </button>
+          </div>
           
           {/* Farm Plots Summary and List */}
           <div style={styles.statsPanel}>
@@ -874,20 +979,10 @@ const MapMonitoring = () => {
                             '??'
                         )}
                       </div>
-                                          <div style={styles.farmerDetails}>
-                      {plot.plotNumber && (
-                        <div style={{ 
-                          fontSize: '0.65rem', 
-                          fontWeight: '600', 
-                          color: '#2d7c4a',
-                          marginBottom: '2px'
-                        }}>
-                          {plot.plotNumber}
-                        </div>
-                      )}
-                      <div style={styles.farmerName}>{plot.beneficiaryName || 'Unknown Farmer'}</div>
+                      <div style={styles.farmerDetails}>
+                        <div style={styles.farmerName}>{plot.beneficiaryName || 'Unknown Farmer'}</div>
                       <div style={styles.beneficiaryId}>ID: {plot.beneficiaryId || 'N/A'}</div>
-                    </div>
+                      </div>
                     </div>
                     <div style={styles.plotNumber}>Plot #{index + 1}</div>
                   </div>
@@ -917,6 +1012,7 @@ const MapMonitoring = () => {
           setSelectedPlotIndex(index);
           setShowDeleteModal(true);
         }}
+        otherPlots={farmPlots}
       />
       
       {/* Edit Farm/Plot Modal */}
@@ -927,6 +1023,7 @@ const MapMonitoring = () => {
         plot={selectedPlot}
         beneficiaries={beneficiaries}
         isLoading={isCreatingPlot}
+        plotIndex={selectedPlotIndex}
       />
       
       {/* Delete Farm/Plot Modal */}
@@ -935,6 +1032,7 @@ const MapMonitoring = () => {
         onClose={() => setShowDeleteModal(false)}
         onConfirm={() => handleDeletePlot(selectedPlot, selectedPlotIndex)}
         plot={selectedPlot}
+        plotIndex={selectedPlotIndex}
         isLoading={isCreatingPlot}
       />
       
@@ -945,10 +1043,18 @@ const MapMonitoring = () => {
         type="success"
         title="Success!"
         message={successMessage}
-        confirmText="OK"
         autoClose={true}
-        autoCloseDelay={3000}
+        autoCloseDelay={1700}
       />
+      
+      {/* Loading Modal */}
+      <LoadingModal
+        isOpen={isCreatingPlot}
+        title={loadingTitle}
+        message={loadingMessage}
+        dismissible={false}
+      />
+      
       </div>
     </>
   );

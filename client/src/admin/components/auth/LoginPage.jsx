@@ -4,6 +4,7 @@ import { authAPI } from '../../services/api';
 import coffeeLogo from '../../../assets/images/coffee crop logo.png';
 import bgImage from '../../../assets/images/bg1.png';
 import AlertModal from '../ui/AlertModal';
+import { LoggingInModal } from '../ui/LoadingModal';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -15,6 +16,8 @@ const LoginPage = () => {
   const [touched, setTouched] = useState({ username: false, password: false });
   const [alertOpen, setAlertOpen] = useState(false);
   const [redirectAfterAlert, setRedirectAfterAlert] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [loggingOpen, setLoggingOpen] = useState(false);
 
   const validate = (values) => {
     const nextErrors = { username: '', password: '' };
@@ -48,6 +51,7 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSubmitted(true);
 
     const nextErrors = validate({ username, password });
     setErrors(nextErrors);
@@ -55,16 +59,24 @@ const LoginPage = () => {
     if (nextErrors.username || nextErrors.password) return;
 
     setLoading(true);
+    const startTime = Date.now();
+    setLoggingOpen(true);
     try {
       const res = await authAPI.login(String(username).trim(), password);
       if (res && res.token) {
         localStorage.setItem('auth_token', res.token);
         localStorage.setItem('auth_user', JSON.stringify(res.user));
-        setRedirectAfterAlert(true);
-        setAlertOpen(true);
+        const elapsed = Date.now() - startTime;
+        const delay = Math.max(0, 1000 - elapsed);
+        setTimeout(() => {
+          setLoggingOpen(false);
+          setRedirectAfterAlert(true);
+          setAlertOpen(true);
+        }, delay);
       }
     } catch (err) {
       setError(err.message || 'Login failed');
+      setLoggingOpen(false);
     } finally {
       setLoading(false);
     }
@@ -72,12 +84,14 @@ const LoginPage = () => {
 
   const handleBlur = (field) => () => {
     setTouched((t) => ({ ...t, [field]: true }));
-    setErrors(validate({ username, password }));
+    if (submitted) {
+      setErrors(validate({ username, password }));
+    }
   };
 
   const handleChange = (setter) => (e) => {
     setter(e.target.value);
-    if (touched.username || touched.password) {
+    if (submitted) {
       setErrors(validate({ username: fieldValue('username', e), password: fieldValue('password', e) }));
     }
   };
@@ -93,7 +107,7 @@ const LoginPage = () => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundImage: `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url(${bgImage})`,
+    backgroundImage: `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.5)), url(${bgImage})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundRepeat: 'no-repeat'
@@ -101,8 +115,8 @@ const LoginPage = () => {
 
   const card = {
     background: 'white',
-    padding: '2rem',
-    borderRadius: '12px',
+    padding: '2rem 2rem 5rem 2rem',
+    borderRadius: '8px',
     boxShadow: '0 10px 20px var(--shadow-color)',
     width: '100%',
     maxWidth: 400,
@@ -112,10 +126,10 @@ const LoginPage = () => {
   const input = {
     width: '100%',
     padding: '0.75rem 1rem',
-    marginBottom: '0.75rem',
+    marginBottom: 0,
     borderRadius: 8,
     border: '1px solid #e9ecef',
-    fontSize: '1rem',
+    fontSize: '0.8rem',
     outline: 'none'
   };
 
@@ -130,14 +144,18 @@ const LoginPage = () => {
     cursor: 'pointer'
   };
 
-  const title = { marginBottom: '0.25rem', color: 'var(--dark-green)', textAlign: 'center' };
-  const subtitle = { marginBottom: '1rem', color: 'var(--dark-brown)', textAlign: 'center', fontWeight: 500, fontSize: '0.95rem' };
-  const err = { color: '#b00020', marginBottom: '0.75rem' };
-  const label = { fontWeight: 600, color: 'var(--primary-green)', marginBottom: '0.25rem', display: 'block' };
-  const fieldError = { color: '#b00020', fontSize: '0.85rem', marginTop: '-0.5rem', marginBottom: '0.5rem' };
-  const headerWrap = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' };
+  const title = { marginBottom: '.25rem', color: 'var(--dark-green)', textAlign: 'center' };
+  const subtitle = { marginBottom: '1.1rem', color: 'var(--dark-brown)', textAlign: 'center', fontWeight: 500, fontSize: '0.95rem' };
+  const err = { color: '#b00020', marginBottom: '1rem' };
+  const label = { fontWeight: 600, color: 'var(--primary-green)', marginBottom: 0, display: 'block' };
+  const fieldError = { color: '#b00020', fontSize: '0.85rem', marginTop: '0.25rem', marginBottom: 0 };
+  const headerWrap = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem' };
   const logo = { height: 56, width: 'auto' };
+  const formGroup = { display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' };
   
+  const showUsernameError = submitted && touched.username && Boolean(errors.username);
+  const showPasswordError = submitted && touched.password && Boolean(errors.password);
+
   const handleAlertClose = () => {
     setAlertOpen(false);
     if (redirectAfterAlert) {
@@ -155,67 +173,73 @@ const LoginPage = () => {
         </div>
         {error ? <div style={err}>{error}</div> : null}
 
-        <label style={label} htmlFor="username">Username</label>
-        <input
-          id="username"
-          name="username"
-          style={{
-            ...input,
-            borderColor: touched.username && errors.username ? '#b00020' : '#e9ecef',
-            boxShadow: touched.username && errors.username ? '0 0 0 3px rgba(176,0,32,0.08)' : 'none'
-          }}
-          type="text"
-          placeholder="Enter your username"
-          value={username}
-          onChange={handleChange(setUsername)}
-          onBlur={handleBlur('username')}
-          autoComplete="username"
-          autoFocus
-          required
-          aria-invalid={Boolean(touched.username && errors.username)}
-          aria-describedby="username-error"
-        />
-        {touched.username && errors.username ? (
-          <div id="username-error" style={fieldError}>{errors.username}</div>
-        ) : null}
+        <div style={formGroup}>
+          <label style={label} htmlFor="username">Username</label>
+          <input
+            id="username"
+            name="username"
+            style={{
+              ...input,
+              borderColor: showUsernameError ? '#b00020' : '#e9ecef',
+              boxShadow: showUsernameError ? '0 0 0 3px rgba(176,0,32,0.08)' : 'none'
+            }}
+            type="text"
+            placeholder="Enter your username"
+            value={username}
+            onChange={handleChange(setUsername)}
+            onBlur={handleBlur('username')}
+            autoComplete="username"
+            autoFocus
+            required
+            aria-invalid={Boolean(showUsernameError)}
+            aria-describedby="username-error"
+          />
+          {showUsernameError ? (
+            <div id="username-error" style={fieldError}>{errors.username}</div>
+          ) : null}
+        </div>
 
-        <label style={label} htmlFor="password">Password</label>
-        <input
-          id="password"
-          name="password"
-          style={{
-            ...input,
-            borderColor: touched.password && errors.password ? '#b00020' : '#e9ecef',
-            boxShadow: touched.password && errors.password ? '0 0 0 3px rgba(176,0,32,0.08)' : 'none'
-          }}
-          type="password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={handleChange(setPassword)}
-          onBlur={handleBlur('password')}
-          autoComplete="current-password"
-          required
-          aria-invalid={Boolean(touched.password && errors.password)}
-          aria-describedby="password-error"
-        />
-        {touched.password && errors.password ? (
-          <div id="password-error" style={fieldError}>{errors.password}</div>
-        ) : null}
+        <div style={formGroup}>
+          <label style={label} htmlFor="password">Password</label>
+          <input
+            id="password"
+            name="password"
+            style={{
+              ...input,
+              borderColor: showPasswordError ? '#b00020' : '#e9ecef',
+              boxShadow: showPasswordError ? '0 0 0 3px rgba(176,0,32,0.08)' : 'none'
+            }}
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={handleChange(setPassword)}
+            onBlur={handleBlur('password')}
+            autoComplete="current-password"
+            required
+            aria-invalid={Boolean(showPasswordError)}
+            aria-describedby="password-error"
+          />
+          {showPasswordError ? (
+            <div id="password-error" style={fieldError}>{errors.password}</div>
+          ) : null}
+        </div>
 
         <button style={{
           ...button,
+          marginTop: '0.25rem',
           opacity: loading ? 0.85 : 1,
           filter: loading ? 'grayscale(0.1)' : 'none'
         }} type="submit" disabled={loading}>
-          {loading ? 'Signing in...' : 'Sign in'}
+          {'Sign in'}
         </button>
       </form>
+      <LoggingInModal isOpen={loggingOpen} />
       <AlertModal
         isOpen={alertOpen}
         onClose={handleAlertClose}
         type="success"
         title="Login Successful"
-        message="Welcome back! Redirecting to your dashboard..."
+        message="Welcome back!"
         autoClose={true}
         autoCloseDelay={1500}
       />
