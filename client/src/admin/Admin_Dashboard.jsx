@@ -1,10 +1,13 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import PersonalDetailsTable from './components/features/beneficiaries/Personal_Details';
 import SeedlingRecordsTable from './components/features/seedlings/Seedling_Records';
 import CropStatusTable from './components/features/crop-status/Crop_Status';
 import MapMonitoring from './components/features/map-monitoring/Map_Monitoring';
+import CropSuccessRateChart from './components/features/dashboard/CropSuccessRateChart';
+import SeedlingSurvivalRateChart from './components/features/dashboard/SeedlingSurvivalRateChart';
+import RecentActivityFeed from './components/features/dashboard/RecentActivityFeed';
 import { getActiveFromPath } from './utils/navigation';
 import { useStatistics } from './hooks/useStatistics';
 
@@ -21,62 +24,129 @@ const DashboardContent = ({ active }) => {
   }
 
   return (
-    <div style={{ 
-      display: 'grid', 
-      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-      gap: '1.5rem',
-      marginBottom: '2rem'
-    }}>
-      {/* Total Beneficiaries */}
+    <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{
-        background: 'linear-gradient(135deg, #e8f4fd 0%, #d1e7dd 100%)',
-        padding: '1.5rem',
-        borderRadius: '12px',
-        color: '#2c5530',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-        border: '1px solid #e9ecef'
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+        gap: '1.5rem',
+        marginBottom: '1.5rem' // Reduced margin-bottom
       }}>
-        <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', opacity: 0.7, fontWeight: '500' }}>Total Beneficiaries</h3>
-        <p style={{ margin: 0, fontSize: '2.5rem', fontWeight: 'bold', color: '#2c5530' }}>{stats.totalBeneficiaries}</p>
+        {/* Total Beneficiaries */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          padding: '1.5rem',
+          borderRadius: '12px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+          border: '1px solid #e0e0e0',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          minHeight: '120px'
+        }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '500', color: '#616161' }}>Total Beneficiaries</h3>
+          <p style={{ margin: 0, fontSize: '2.5rem', fontWeight: 'bold', color: '#4CAF50' }}>{stats.totalBeneficiaries}</p>
+        </div>
+
+        {/* Total Seeds Distributed */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          padding: '1.5rem',
+          borderRadius: '12px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+          border: '1px solid #e0e0e0',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          minHeight: '120px'
+        }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '500', color: '#616161' }}>Total Seeds Distributed</h3>
+          <p style={{ margin: 0, fontSize: '2.5rem', fontWeight: 'bold', color: '#2196F3' }}>{stats.totalSeedsDistributed.toLocaleString()}</p>
+        </div>
+
+        {/* Alive Crops */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          padding: '1.5rem',
+          borderRadius: '12px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+          border: '1px solid #e0e0e0',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          minHeight: '120px'
+        }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '500', color: '#616161' }}>Alive Crops</h3>
+          <p style={{ margin: 0, fontSize: '2.5rem', fontWeight: 'bold', color: '#8BC34A' }}>{stats.totalAlive.toLocaleString()}</p>
+        </div>
+
+        {/* Dead Crops */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          padding: '1.5rem',
+          borderRadius: '12px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+          border: '1px solid #e0e0e0',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          minHeight: '120px'
+        }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '500', color: '#616161' }}>Dead Crops</h3>
+          <p style={{ margin: 0, fontSize: '2.5rem', fontWeight: 'bold', color: '#F44336' }}>{stats.totalDead.toLocaleString()}</p>
+        </div>
       </div>
 
-      {/* Total Seeds Distributed */}
       <div style={{
-        background: 'linear-gradient(135deg, #fff3cd 0%, #f8d7da 100%)',
-        padding: '1.5rem',
-        borderRadius: '12px',
-        color: '#2c5530',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-        border: '1px solid #e9ecef'
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', // Adjusted minmax for better sizing
+        gap: '1.5rem',
+        marginBottom: '1.5rem', // Adjusted for consistency and reduced spacing
+        alignItems: 'stretch', // Ensure items stretch to fill the height
+        justifyItems: 'center' // Center items horizontally within their grid area
       }}>
-        <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', opacity: 0.7, fontWeight: '500' }}>Total Seeds Distributed</h3>
-        <p style={{ margin: 0, fontSize: '2.5rem', fontWeight: 'bold', color: '#2c5530' }}>{stats.totalSeedsDistributed.toLocaleString()}</p>
+        <div style={{
+          backgroundColor: '#ffffff',
+          padding: '1.5rem',
+          borderRadius: '12px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+          border: '1px solid #e0e0e0',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '300px', // Increased minHeight for better chart presentation
+          width: '100%' // Ensure it takes full width of its grid column
+        }}>
+          <CropSuccessRateChart data={stats} />
+        </div>
+        <div style={{
+          backgroundColor: '#ffffff',
+          padding: '1.5rem',
+          borderRadius: '12px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+          border: '1px solid #e0e0e0',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '300px', // Increased minHeight for better chart presentation
+          width: '100%' // Ensure it takes full width of its grid column
+        }}>
+          <SeedlingSurvivalRateChart data={stats} />
+        </div>
       </div>
 
-      {/* Alive Crops */}
       <div style={{
-        background: 'linear-gradient(135deg, #d1e7dd 0%, #cff4fc 100%)',
-        padding: '1.5rem',
-        borderRadius: '12px',
-        color: '#2c5530',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-        border: '1px solid #e9ecef'
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gap: '1.5rem',
+        marginBottom: '2rem'
       }}>
-        <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', opacity: 0.7, fontWeight: '500' }}>Alive Crops</h3>
-        <p style={{ margin: 0, fontSize: '2.5rem', fontWeight: 'bold', color: '#2c5530' }}>{stats.totalAlive.toLocaleString()}</p>
-      </div>
-
-      {/* Dead Crops */}
-      <div style={{
-        background: 'linear-gradient(135deg, #f8d7da 0%, #fff3cd 100%)',
-        padding: '1.5rem',
-        borderRadius: '12px',
-        color: '#2c5530',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-        border: '1px solid #e9ecef'
-      }}>
-        <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', opacity: 0.7, fontWeight: '500' }}>Dead Crops</h3>
-        <p style={{ margin: 0, fontSize: '2.5rem', fontWeight: 'bold', color: '#2c5530' }}>{stats.totalDead.toLocaleString()}</p>
+        <RecentActivityFeed active={active} />
       </div>
     </div>
   );
@@ -133,13 +203,12 @@ const AdminDashboard = () => {
     default:
       content = (
         <div style={{ 
-          padding: '2rem',
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
           height: '100%'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2rem' }}>
             <h2 style={{ color: '#2c5530' }}>Dashboard</h2>
           </div>
           <DashboardContent active={active} />
