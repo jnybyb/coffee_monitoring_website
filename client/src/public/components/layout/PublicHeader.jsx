@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PublicHeader = () => {
+const PublicHeader = ({ onAboutClick }) => {
   return (
     <header
       style={{
@@ -14,7 +14,8 @@ const PublicHeader = () => {
         padding: '1rem 2rem',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        fontFamily: 'Montserrat, Arial, sans-serif',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -31,7 +32,21 @@ const PublicHeader = () => {
           margin: 0, 
           padding: 0 
         }}>
-          <li><a href="#about" style={{ color: '#fff', textDecoration: 'none', transition: 'color 0.2s' }}>About</a></li>
+          <li><button 
+            onClick={onAboutClick}
+            style={{ 
+              color: '#fff', 
+              textDecoration: 'none', 
+              transition: 'color 0.2s',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontFamily: 'inherit'
+            }}
+          >
+            About
+          </button></li>
           <li><a href="#services" style={{ color: '#fff', textDecoration: 'none', transition: 'color 0.2s' }}>Services</a></li>
           <li><a href="#contact" style={{ color: '#fff', textDecoration: 'none', transition: 'color 0.2s' }}>Contact</a></li>
         </ul>

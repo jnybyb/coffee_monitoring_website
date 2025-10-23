@@ -155,8 +155,9 @@
      TYPOGRAPHY AND GLOBAL STYLES
      ============================ */
   
-  /* Box sizing setup for layout consistency */
+  /* Smooth scrolling for the entire page */
   html {
+    scroll-behavior: smooth;
     box-sizing: border-box;
   }
   
@@ -180,67 +181,15 @@
     min-width: 320px;
     height: 100vh;
     width: 100vw;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-:root {
-  --white: #ffffff;
-  --dark-green: #2c5530;
-  --forest-green: #1e3a23;
-  --mint-green: #d1e7dd;
-  --dark-brown: #8b4513;
-  --shadow-color: rgba(0, 0, 0, 0.1);
-  --shadow-light: rgba(0, 0, 0, 0.05);
-  --font-main: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: var(--font-main);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-#root {
-  min-height: 100vh;
-  width: 100vw;
-}
-  
-  /* ============================
-     TYPOGRAPHY AND GLOBAL STYLES
-     ============================ */
-  
-  /* Box sizing setup for layout consistency */
-  html {
-    box-sizing: border-box;
-  }
-  
-  *, *::before, *::after {
-    box-sizing: inherit;
-  }
-  
-  /* Use Montserrat for headings */
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-main), Arial, sans-serif;
-    margin: 0;
-    font-weight: 700;
-  }
-  
-  /* Main body style */
-  body {
-    font-family: var(--font-main);
-    background: var(--white);
-    margin: 0;
-    padding: 0;
-    min-width: 320px;
-    height: 100vh;
+  #root {
+    min-height: 100vh;
     width: 100vw;
-    overflow: hidden;
   }
 
 
