@@ -7,7 +7,7 @@ class CropStatus {
       SELECT cs.*, 
              bd.first_name, bd.middle_name, bd.last_name, bd.picture as beneficiary_picture
       FROM crop_status cs
-      JOIN beneficiary_details bd ON bd.beneficiary_id = cs.beneficiary_id
+      JOIN beneficiaries bd ON bd.beneficiary_id = cs.beneficiary_id
       ORDER BY cs.survey_date DESC, cs.created_at DESC
     `);
     
@@ -34,7 +34,7 @@ class CropStatus {
       SELECT cs.*, 
              bd.first_name, bd.middle_name, bd.last_name, bd.picture as beneficiary_picture
       FROM crop_status cs
-      JOIN beneficiary_details bd ON bd.beneficiary_id = cs.beneficiary_id
+      JOIN beneficiaries bd ON bd.beneficiary_id = cs.beneficiary_id
       WHERE cs.id = ?
     `, [id]);
     

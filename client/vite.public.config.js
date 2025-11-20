@@ -5,12 +5,12 @@ import { resolve } from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  root: 'src/public', // Set root to public folder
+  root: 'public', // Set root to public folder
   build: {
     outDir: '../../dist/public', // Output to separate public build folder
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'src/public/index.html')
+        main: resolve(__dirname, 'public/index.html')
       }
     }
   },

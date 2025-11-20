@@ -50,22 +50,8 @@ const requireAdmin = (req, res, next) => {
 };
 
 const findAdminByUsername = async (username) => {
-  const [rows] = await getPromisePool().query('SELECT id, username, password_hash, role FROM admins WHERE username = ?', [username]);
+  const [rows] = await getPromisePool().query('SELECT admin_id AS id, username, password_hash, role FROM admins WHERE username = ?', [username]);
   return rows[0] || null;
-};
-
-const logLoginAttempt = async (adminUserId, success, failureReason = null, req = null) => {
-  try {
-    const ipAddress = req ? req.ip || req.connection.remoteAddress : null;
-    const userAgent = req ? req.get('User-Agent') : null;
-
-    await getPromisePool().query(
-      'INSERT INTO admin_login_logs (admin_user_id, ip_address, user_agent, success, failure_reason) VALUES (?, ?, ?, ?, ?)',
-      [adminUserId, ipAddress, userAgent, success, failureReason]
-    );
-  } catch (error) {
-    console.error('Error logging login attempt:', error.message);
-  }
 };
 
 // Export server startup time for potential client-side use
@@ -77,7 +63,6 @@ module.exports = {
   authenticate,
   requireAdmin,
   findAdminByUsername,
-  logLoginAttempt,
   getServerStartupTime
 };
 

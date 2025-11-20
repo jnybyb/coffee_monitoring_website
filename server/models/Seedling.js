@@ -77,16 +77,6 @@ class Seedling {
       throw new Error('Planted seedlings cannot exceed received seedlings');
     }
     
-    console.log('Creating seedling record with validated data:', {
-      beneficiaryId: seedlingData.beneficiaryId,
-      received,
-      planted,
-      hectares,
-      dateReceived,
-      dateStart,
-      dateEnd
-    });
-    
     const sql = `INSERT INTO seedling_records 
       (beneficiary_id, received, date_received, planted, hectares, plot, date_of_planting, date_of_planting_end, gps)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -144,17 +134,6 @@ class Seedling {
     if (planted > received) {
       throw new Error('Planted seedlings cannot exceed received seedlings');
     }
-    
-    console.log('Updating seedling record with validated data:', {
-      id,
-      beneficiaryId: seedlingData.beneficiaryId,
-      received,
-      planted,
-      hectares,
-      dateReceived,
-      dateStart,
-      dateEnd
-    });
     
     const sql = `UPDATE seedling_records SET 
       beneficiary_id = ?, received = ?, date_received = ?, planted = ?, hectares = ?, plot = ?, date_of_planting = ?, date_of_planting_end = ?, gps = ?

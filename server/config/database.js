@@ -1,15 +1,18 @@
 const mysql = require('mysql2');
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcryptjs');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-// Read SQL queries from file
-const sqlQueries = fs.readFileSync(path.join(__dirname, 'db_queries.sql'), 'utf8');
+// Read SQL schema from file
+const sqlSchema = fs.readFileSync(path.join(__dirname, 'db_schema.sql'), 'utf8');
 
-// Database configuration without database name for initial connection
+const dbName = process.env.DB_NAME || 'coffee_monitoring';
+
+// Initial connection config (without specifying database)
 const initialDbConfig = {
   host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 3307,
+  port: Number(process.env.DB_PORT) || 3307,
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   waitForConnections: true,
@@ -17,150 +20,133 @@ const initialDbConfig = {
   queueLimit: 0
 };
 
-const dbName = process.env.DB_NAME || 'coffee_monitoring';
-
-const initialPool = mysql.createPool(initialDbConfig);
-const initialPromisePool = initialPool.promise();
-
 let pool = null;
 let promisePool = null;
 
+// Initialize database and tables
 const initializeDatabase = async () => {
   try {
     await createDatabase();
     await createDatabaseConnection();
     await createTables();
-    await backfillBeneficiaryAges();
+    await seedDefaultAdmin(); // Seed default admin after tables are ready
   } catch (error) {
     console.error('Database initialization failed:', error.message);
     throw error;
   }
 };
 
+// Create database if it doesn't exist
 const createDatabase = async () => {
+  const initialPool = mysql.createPool(initialDbConfig).promise();
   try {
-    await initialPromisePool.query(`CREATE DATABASE IF NOT EXISTS ${dbName}`);
+    await initialPool.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
+    console.log(`Database "${dbName}" ensured.`);
   } catch (error) {
     console.error('Error creating database:', error.message);
     throw error;
+  } finally {
+    await initialPool.end();
   }
 };
 
+// Create connection pool with database selected
 const createDatabaseConnection = async () => {
-  try {
-    if (pool) {
-      try { await pool.end(); } catch (_) {}
-    }
-
-    pool = mysql.createPool({
-      ...initialDbConfig,
-      database: dbName
-    });
-    promisePool = pool.promise();
-
-    console.log('Database connected successfully.');
-  } catch (error) {
-    console.error('Error creating database connection pool:', error.message);
-    throw error;
+  if (pool) {
+    try { await pool.end(); } catch (_) {}
   }
+
+  pool = mysql.createPool({
+    ...initialDbConfig,
+    database: dbName
+  });
+  promisePool = pool.promise();
+  console.log('Database connection established.');
 };
 
+// Get promise pool
 const getPromisePool = () => {
-  if (!promisePool) {
-    throw new Error('Database not initialized');
-  }
+  if (!promisePool) throw new Error('Database not initialized');
   return promisePool;
 };
 
+// Remove SQL comments
 const stripSqlComments = (query) => {
-  // Remove line comments starting with -- and block comments /* ... */
   return query
     .replace(/--.*$/gm, '')
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .trim();
 };
 
+// Extract table name from CREATE TABLE query
 const extractTableName = (query) => {
   const normalized = stripSqlComments(query);
   const match = normalized.match(/create\s+table\s+if\s+not\s+exists\s+[`"]?(\w+)[`"]?/i);
   return match ? match[1] : null;
 };
 
+// Create tables from SQL schema
 const createTables = async () => {
-  try {
-    const queries = sqlQueries
-      .split(';')
-      .map(q => q.trim())
-      .filter(q => q.length > 0)
-      .filter(q => {
-        const lower = q.toLowerCase();
-        return !lower.startsWith('create database') && !lower.startsWith('use ');
-      });
+  const queries = sqlSchema
+    .split(';')
+    .map(q => q.trim())
+    .filter(q => q.length > 0)
+    .filter(q => !q.toLowerCase().startsWith('create database') && !q.toLowerCase().startsWith('use'));
 
-    for (const query of queries) {
-      const normalized = stripSqlComments(query);
-      if (!normalized) continue;
-      const lower = normalized.toLowerCase();
+  for (const query of queries) {
+    const normalized = stripSqlComments(query);
+    if (!normalized) continue;
 
-      if (lower.includes('create table if not exists')) {
-        const tableName = extractTableName(normalized);
-        if (!tableName) {
-          try { await getPromisePool().query(normalized); } catch (error) {
-            if (!(error.code === 'ER_TABLE_EXISTS_ERROR' || error.message.includes('already exists'))) {
-              throw error;
-            }
-          }
-          continue;
-        }
+    if (normalized.toLowerCase().includes('create table if not exists')) {
+      const tableName = extractTableName(normalized);
+      if (tableName) {
         const [existsRows] = await getPromisePool().query('SHOW TABLES LIKE ?', [tableName]);
-        const tableExists = Array.isArray(existsRows) && existsRows.length > 0;
-        if (tableExists) continue;
+        if (existsRows.length > 0) continue; // Table already exists
         await getPromisePool().query(normalized);
-        console.log(`Table ${tableName} created successfully.`);
+        console.log(`Table "${tableName}" created.`);
         continue;
       }
+    }
 
-      try {
-        await getPromisePool().query(normalized);
-      } catch (error) {
-        // Ignore duplicates for indexes/keys and foreign keys already present
-        const msg = String(error.message || '').toLowerCase();
-        if (
-          error.code === 'ER_DUP_KEYNAME' ||
-          error.code === 'ER_CANT_DROP_FIELD_OR_KEY' ||
-          msg.includes('duplicate key name') ||
-          msg.includes('duplicate foreign key constraint name') ||
-          msg.includes("can't create table") && msg.includes('errno: 121') ||
-          msg.includes('check that column/key exists') ||
-          msg.includes('doesn\'t exist')
-        ) {
-          continue;
-        }
-        throw error;
+    // Execute other statements (indexes, foreign keys, etc.)
+    try {
+      await getPromisePool().query(normalized);
+    } catch (error) {
+      const msg = (error.message || '').toLowerCase();
+      if (
+        error.code === 'ER_DUP_KEYNAME' ||
+        error.code === 'ER_CANT_DROP_FIELD_OR_KEY' ||
+        msg.includes('duplicate key name') ||
+        msg.includes('duplicate foreign key constraint') ||
+        (msg.includes("can't create table") && msg.includes('errno: 121')) ||
+        msg.includes('doesn\'t exist')
+      ) {
+        continue;
       }
+      throw error;
     }
-  } catch (error) {
-    console.error('Error creating tables:', error.message);
-    throw error;
   }
 };
 
-// Backfill ages for existing rows if missing
-const backfillBeneficiaryAges = async () => {
+// Seed default admin if none exists
+const seedDefaultAdmin = async () => {
   try {
-    const [result] = await getPromisePool().query(
-      `UPDATE beneficiary_details 
-       SET age = TIMESTAMPDIFF(YEAR, birth_date, CURDATE())
-       WHERE birth_date IS NOT NULL AND (age IS NULL OR age = 0)`
-    );
-    if (result.affectedRows > 0) {
-      console.log(`Backfilled age for ${result.affectedRows} beneficiaries.`);
+    const [rows] = await getPromisePool().query('SELECT COUNT(*) AS cnt FROM admins');
+    const exists = rows && rows[0] && rows[0].cnt > 0;
+    if (!exists) {
+      const username = process.env.ADMIN_USERNAME || 'admin';
+      const password = process.env.ADMIN_PASSWORD || 'admin123';
+      const hash = await bcrypt.hash(password, 10);
+      await getPromisePool().query(
+        'INSERT INTO admins (username, password_hash, role) VALUES (?, ?, ?)',
+        [username, hash, 'admin']
+      );
+      console.log('Default admin user created.');
     }
-  } catch (error) {
-    console.error('Error backfilling ages:', error.message);
+  } catch (err) {
+    console.error('Failed to seed admin user:', err.message);
   }
 };
-
 
 module.exports = {
   getPromisePool,
@@ -168,5 +154,5 @@ module.exports = {
   createDatabase,
   createDatabaseConnection,
   createTables,
-  backfillBeneficiaryAges
+  seedDefaultAdmin
 };

@@ -5,7 +5,7 @@ const BaseController = require('../controllers/baseController');
 const router = express.Router();
 
 // Generate beneficiary ID
-router.post('/generate-id', BaseController.asyncHandler(BeneficiaryController.generateBeneficiaryId));
+router.get('/generate-id', BaseController.asyncHandler(BeneficiaryController.generateBeneficiaryId));
 
 // List beneficiaries
 router.get('/', BaseController.asyncHandler(BeneficiaryController.listBeneficiaries));

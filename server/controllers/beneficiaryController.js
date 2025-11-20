@@ -2,18 +2,18 @@ const path = require('path');
 const Beneficiary = require('../models/Beneficiary');
 const BaseController = require('./baseController');
 const { beneficiaryUpload, uploadsDir } = require('../utils/upload');
-const { generateBeneficiaryId } = require('../utils/beneficiaryId');
+const { generateBenID } = require('../utils/generateBenID');
 
 class BeneficiaryController {
   // Generate beneficiary ID
   static async generateBeneficiaryId(req, res) {
-    const { firstName, lastName } = req.body;
-    if (!firstName || !lastName) {
-      return BaseController.sendBadRequest(res, 'First name and last name are required');
+    try {
+      const beneficiaryId = await generateBenID();
+      BaseController.sendSuccess(res, { beneficiaryId });
+    } catch (error) {
+      console.error('Error in generateBeneficiaryId controller:', error);
+      BaseController.handleError(res, error);
     }
-    
-    const beneficiaryId = await generateBeneficiaryId(firstName, lastName);
-    BaseController.sendSuccess(res, { beneficiaryId });
   }
 
   // List all beneficiaries
@@ -33,14 +33,13 @@ class BeneficiaryController {
 
   // Create new beneficiary
   static async createBeneficiary(req, res) {
-    console.log('Creating beneficiary with data:', {
-      beneficiaryId: req.body.beneficiaryId,
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      beneficiaryIdLength: req.body.beneficiaryId?.length || 0
-    });
-    
     const filePath = req.file ? path.join(uploadsDir, req.file.filename) : null;
+    
+    // Generate beneficiary ID if not provided
+    if (!req.body.beneficiaryId) {
+      req.body.beneficiaryId = await generateBenID();
+    }
+    
     const result = await Beneficiary.create(req.body, filePath);
     BaseController.sendSuccess(res, { id: result.id, beneficiaryId: result.beneficiaryId });
   }

@@ -13,7 +13,7 @@ class FarmPlot {
               bd.purok, bd.barangay, bd.municipality, bd.province,
               bd.picture
        FROM farm_plots fp
-       JOIN beneficiary_details bd ON bd.beneficiary_id = fp.beneficiary_id
+       JOIN beneficiaries bd ON bd.beneficiary_id = fp.beneficiary_id
        ORDER BY fp.created_at DESC`
     );
 
@@ -93,7 +93,7 @@ class FarmPlot {
               bd.purok, bd.barangay, bd.municipality, bd.province,
               bd.picture
        FROM farm_plots fp
-       JOIN beneficiary_details bd ON bd.beneficiary_id = fp.beneficiary_id
+       JOIN beneficiaries bd ON bd.beneficiary_id = fp.beneficiary_id
        WHERE fp.id = ?`,
       [id]
     );
