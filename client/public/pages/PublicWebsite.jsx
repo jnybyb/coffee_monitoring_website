@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import bgImage from '../../assets/images/bg1.png';
+import bgImage from '../components/layout/imgbg1/bg1.png';
 import PublicHeader from '../components/layout/PublicHeader';
 import PublicFooter from '../components/layout/PublicFooter';
 import { statisticsAPI } from '../../admin/services/api'; // Corrected import path
@@ -27,6 +27,16 @@ const PublicWebsite = () => {
     fetchStats();
   }, []);
 
+  const scrollToAbout = () => {
+    const aboutSection = document.getElementById('about');
+    if (aboutSection) {
+      aboutSection.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  };
+
   return (
     <div
       style={{
@@ -36,22 +46,23 @@ const PublicWebsite = () => {
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
+        scrollBehavior: 'smooth',
       }}
     >
       {/* Header */}
-      <PublicHeader />
+      <PublicHeader onAboutClick={scrollToAbout} />
       
       {/* Background Image */}
       <div
         style={{
-          position: 'absolute',
+          position: 'fixed',
           top: 0,
           left: 0,
           width: '100%',
           height: '100%',
           backgroundImage: `url(${bgImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundSize: '100% 100%',
+          backgroundPosition: 'center center',
           backgroundRepeat: 'no-repeat',
           zIndex: 1,
         }}
@@ -80,8 +91,9 @@ const PublicWebsite = () => {
           alignItems: 'center',
           justifyContent: 'center',
           flex: 1,
-          padding: '2rem',
+          padding: '15rem',
           textAlign: 'center',
+          fontFamily: 'Montserrat, Arial, sans-serif',
         }}
       >
         <div
@@ -137,8 +149,109 @@ const PublicWebsite = () => {
         </div>
       </div>
       
-      {/* Footer */}
-      <PublicFooter />
+      {/* Copyright Section with Black Border - Full Width */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 3,
+          width: '100vw',
+          marginLeft: 'calc(-50vw + 50%)',
+          background: 'rgba(0, 0, 0, 0.9)',
+          borderTop: '1px solid #333',
+          borderBottom: '1px solid #333',
+          padding: '2.7rem',
+          textAlign: 'center',
+        }}
+      >
+        <p style={{ margin: '0 0 1rem 0', color: '#fff', fontSize: '1rem' }}>
+          © 2024 KAPPI - Coffee Farm Monitoring System
+        </p>
+        <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.8, color: '#fff' }}>
+          Taocanga, Manay, Davao Oriental, Philippines
+        </p>
+      </div>
+      
+      {/* About Section */}
+      <div
+        id="about"
+        style={{
+          position: 'relative',
+          zIndex: 3,
+          background: 'rgba(255, 255, 255, 0.95)',
+          padding: '10rem 2rem',
+          textAlign: 'center',
+        }}
+      >
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <h2
+            style={{
+              fontSize: '2.5rem',
+              fontWeight: 'bold',
+              color: '#228B22',
+              marginBottom: '2rem',
+            }}
+          >
+            About KAPPI
+          </h2>
+          <div style={{ display: 'flex', gap: '3rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <div style={{ flex: '1', minWidth: '300px', maxWidth: '400px' }}>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#333', marginBottom: '1rem' }}>
+                Our Mission
+              </h3>
+              <p style={{ fontSize: '1.1rem', lineHeight: '1.6', color: '#555' }}>
+                To empower coffee farmers in Taocanga through sustainable farming practices, 
+                modern monitoring technology, and community-driven development initiatives.
+              </p>
+            </div>
+            <div style={{ flex: '1', minWidth: '300px', maxWidth: '400px' }}>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#333', marginBottom: '1rem' }}>
+                Our Vision
+              </h3>
+              <p style={{ fontSize: '1.1rem', lineHeight: '1.6', color: '#555' }}>
+                A thriving coffee industry that preserves our cultural heritage while 
+                embracing innovation for sustainable economic growth and environmental stewardship.
+              </p>
+            </div>
+            <div style={{ flex: '1', minWidth: '300px', maxWidth: '400px' }}>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#333', marginBottom: '1rem' }}>
+                Our Community
+              </h3>
+              <p style={{ fontSize: '1.1rem', lineHeight: '1.6', color: '#555' }}>
+                Located in the heart of Davao Oriental, our community of dedicated farmers 
+                works together to produce high-quality coffee while protecting our natural resources.
+              </p>
+            </div>
+          </div>
+          
+          <div style={{ marginTop: '3rem', padding: '2rem', background: 'rgba(34, 139, 34, 0.1)', borderRadius: '10px' }}>
+            <h3 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#228B22', marginBottom: '1rem' }}>
+              Why Choose KAPPI?
+            </h3>
+            <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <div style={{ textAlign: 'center', flex: '1', minWidth: '200px' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🌱</div>
+                <h4 style={{ fontWeight: 'bold', color: '#333', marginBottom: '0.5rem' }}>Sustainable Farming</h4>
+                <p style={{ fontSize: '0.9rem', color: '#666' }}>Environmentally conscious practices</p>
+              </div>
+              <div style={{ textAlign: 'center', flex: '1', minWidth: '200px' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📊</div>
+                <h4 style={{ fontWeight: 'bold', color: '#333', marginBottom: '0.5rem' }}>Smart Monitoring</h4>
+                <p style={{ fontSize: '0.9rem', color: '#666' }}>Real-time crop tracking</p>
+              </div>
+              <div style={{ textAlign: 'center', flex: '1', minWidth: '200px' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🤝</div>
+                <h4 style={{ fontWeight: 'bold', color: '#333', marginBottom: '0.5rem' }}>Community Support</h4>
+                <p style={{ fontSize: '0.9rem', color: '#666' }}>Local farmer empowerment</p>
+              </div>
+              <div style={{ textAlign: 'center', flex: '1', minWidth: '200px' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>☕</div>
+                <h4 style={{ fontWeight: 'bold', color: '#333', marginBottom: '0.5rem' }}>Quality Coffee</h4>
+                <p style={{ fontSize: '0.9rem', color: '#666' }}>Premium grade production</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
