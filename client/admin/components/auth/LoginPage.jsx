@@ -47,7 +47,20 @@ const LoginPage = () => {
   useEffect(() => {
     try {
       const token = localStorage.getItem('auth_token');
-      if (token) navigate('/dashboard', { replace: true });
+      if (token) {
+        // Validate token before redirecting
+        authAPI.me()
+          .then(() => {
+            navigate('/dashboard', { replace: true });
+          })
+          .catch(() => {
+            // Token is invalid, clear storage
+            try {
+              localStorage.removeItem('auth_token');
+              localStorage.removeItem('auth_user');
+            } catch (_) {}
+          });
+      }
     } catch (_) {}
   }, [navigate]);
 

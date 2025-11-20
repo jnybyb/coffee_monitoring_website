@@ -2,9 +2,13 @@ import React from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import MainContent from './MainContent';
+import useSessionMonitor from '../../hooks/useSessionMonitor';
 
 // Main layout component that structures the application with header, sidebar, and content
 const Layout = ({ children }) => {
+  // Monitor session for automatic logout on server restart
+  useSessionMonitor();
+  
   // Layout dimensions for consistent spacing
   const sidebarWidth = '223px'; // Original wider width
 
