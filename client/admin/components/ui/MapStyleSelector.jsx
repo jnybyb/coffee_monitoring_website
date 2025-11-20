@@ -30,28 +30,31 @@ const MapStyleSelector = ({
       zIndex: 1000,
       borderRadius: '4px',
       padding: '0.25rem',
-      display: 'flex'
+      display: 'flex',
+      gap: '0.5rem'
     }}>
       {Object.entries(mapStyles).map(([key, style]) => (
         <button
           key={key}
           onClick={() => onStyleChange(key)}
           style={{
-            padding: '0.4rem 0.6rem',
+            width: '2.5rem',
+            height: '2.5rem',
+            padding: '0.5rem',
             backgroundColor: mapStyle === key ? 'var(--dark-green)' : 'var(--white)',
             color: mapStyle === key ? 'white' : 'var(--dark-gray)',
             border: '1px solid var(--light-border)',
             borderRadius: '4px',
             cursor: 'pointer',
-            fontSize: '0.7rem',
+            fontSize: '0.53rem',
             fontWeight: 500,
             display: 'flex',
             alignItems: 'center',
-            gap: '0.3rem',
-            marginLeft: key === 'satellite' ? 0 : '0.25rem'
+            justifyContent: 'center',
+            textShadow: '0 0 3px rgba(255, 255, 255, 0.5), 0 0 5px rgba(255, 255, 255, 0.5)'
           }}
         >
-          <span>{style.name}</span>
+          {style.name}
         </button>
       ))}
     </div>

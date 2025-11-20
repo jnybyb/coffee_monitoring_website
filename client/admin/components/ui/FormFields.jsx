@@ -11,21 +11,21 @@ const getFormStyles = () => ({
   },
   input: {
     width: '100%',
-    padding: '8px 10px',
+    padding: '6px 10px',
     borderRadius: '6px',
     fontSize: '11px',
     boxSizing: 'border-box',
     transition: 'border-color 0.2s ease',
-    height: '36px'
+    height: '32px'
   },
   select: {
     width: '100%',
-    padding: '10px 32px 10px 12px',
+    padding: '8px 32px 8px 12px',
     borderRadius: '6px',
     fontSize: '11px',
     boxSizing: 'border-box',
     backgroundColor: 'white',
-    height: '36px',
+    height: '32px',
     WebkitAppearance: 'none',
     MozAppearance: 'none',
     appearance: 'none',
@@ -54,13 +54,19 @@ export const InputField = memo(({
   placeholder, 
   required = false, 
   error,
-  type = 'text'
+  type = 'text',
+  labelFontSize,
+  labelMarginBottom
 }) => {
   const styles = getFormStyles();
   
   return (
     <div>
-      <label style={styles.label}>
+      <label style={{
+        ...styles.label,
+        fontSize: labelFontSize || styles.label.fontSize,
+        marginBottom: labelMarginBottom || styles.label.marginBottom
+      }}>
         {label} {required && '*'}
       </label>
       <input

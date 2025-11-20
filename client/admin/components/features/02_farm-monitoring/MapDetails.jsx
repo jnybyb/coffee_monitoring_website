@@ -107,12 +107,15 @@ const MapDetails = () => {
         display: 'flex',
         padding: '0 1.25rem',
         backgroundColor: 'transparent',
-        flexShrink: 0
+        flexShrink: 0,
+        width: '100%',
+        gap: '1rem'
       }}>
         <button
           onClick={() => setActiveTab('beneficiaries')}
           style={{
-            padding: '1rem 1rem 0.5rem 0',
+            flex: 1,
+            padding: '1rem 0.5rem 0.5rem 0',
             background: 'transparent',
             color: activeTab === 'beneficiaries' ? 'var(--dark-green)' : 'var(--dark-gray)',
             border: 'none',
@@ -120,16 +123,16 @@ const MapDetails = () => {
             cursor: 'pointer',
             fontWeight: 600,
             fontSize: '0.7rem',
-            position: 'relative'
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
           }}
         >
-          Beneficiaries
+          <span>Beneficiaries</span>
           <span style={{
             background: 'transparent',
             color: activeTab === 'beneficiaries' ? 'var(--dark-green)' : 'var(--dark-gray)',
-            borderRadius: '12px',
-            padding: '0.1rem 0.5rem',
-            marginLeft: '0.5rem',
             fontSize: '0.6rem'
           }}>
             {filteredBeneficiaries.length}
@@ -138,7 +141,8 @@ const MapDetails = () => {
         <button
           onClick={() => setActiveTab('farms')}
           style={{
-            padding: '1rem 1rem 0.5rem 0.75rem',
+            flex: 1,
+            padding: '1rem 0 0.5rem 0.5rem',
             background: 'transparent',
             color: activeTab === 'farms' ? 'var(--dark-green)' : 'var(--dark-gray)',
             border: 'none',
@@ -146,16 +150,16 @@ const MapDetails = () => {
             cursor: 'pointer',
             fontWeight: 600,
             fontSize: '0.7rem',
-            position: 'relative'
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
           }}
         >
-          Farms
+          <span>Farms</span>
           <span style={{
             background: 'transparent',
             color: activeTab === 'farms' ? 'var(--dark-green)' : 'var(--dark-gray)',
-            borderRadius: '12px',
-            padding: '0.1rem 0.5rem',
-            marginLeft: '0.5rem',
             fontSize: '0.6rem'
           }}>
             {filteredFarms.length}
@@ -189,20 +193,23 @@ const MapDetails = () => {
                   <div key={index} style={{
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'space-between',
                     padding: '0.6rem',
                     border: '1px solid var(--light-border)',
                     borderRadius: '6px',
                     backgroundColor: 'var(--white)',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                    width: '100%'
                   }}>
                     {/* Left side - Profile Picture, Name, and Beneficiary ID */}
                     <div style={{ 
                       display: 'flex',
                       alignItems: 'center',
-                      flex: 1
+                      flex: 1,
+                      minWidth: 0
                     }}>
                       {/* Profile Picture or Icon */}
-                      <div style={{ marginRight: '0.6rem' }}>
+                      <div style={{ marginRight: '0.6rem', flexShrink: 0 }}>
                         {beneficiary.picture ? (
                           <img 
                             src={beneficiary.picture} 
@@ -220,12 +227,15 @@ const MapDetails = () => {
                       </div>
                       
                       {/* Beneficiary Info */}
-                      <div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{
                           fontWeight: 600,
                           fontSize: '0.7rem',
                           color: 'var(--dark-gray)',
-                          marginBottom: '0.2rem'
+                          marginBottom: '0.2rem',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
                         }}>
                           {beneficiary.name}
                         </div>
@@ -242,7 +252,9 @@ const MapDetails = () => {
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'flex-end'
+                      justifyContent: 'flex-end',
+                      flexShrink: 0,
+                      marginLeft: '1rem'
                     }}>
                       <div style={{
                         fontSize: '0.60rem',
@@ -285,19 +297,24 @@ const MapDetails = () => {
                   <div key={index} style={{
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'space-between',
                     padding: '0.6rem',
                     border: '1px solid var(--light-border)',
                     borderRadius: '6px',
                     backgroundColor: 'var(--white)',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                    width: '100%'
                   }}>
                     {/* Farm Info */}
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
                         fontWeight: 600,
                         fontSize: '0.7rem',
                         color: 'var(--dark-gray)',
-                        marginBottom: '0.2rem'
+                        marginBottom: '0.2rem',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
                       }}>
                         {farm.name}
                       </div>
@@ -311,26 +328,33 @@ const MapDetails = () => {
                       <div style={{
                         fontSize: '0.6rem',
                         color: 'var(--text-gray)',
-                        marginBottom: '0.2rem'
+                        marginBottom: '0.2rem',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
                       }}>
                         Beneficiary: {farm.beneficiary}
                       </div>
                       <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between'
+                        fontSize: '0.6rem',
+                        color: 'var(--text-gray)'
                       }}>
-                        <div style={{
-                          fontSize: '0.6rem',
-                          color: 'var(--text-gray)'
-                        }}>
-                          Area: {farm.area}
-                        </div>
-                        <div style={{
-                          fontSize: '0.6rem',
-                          color: farm.status === 'Active' ? 'green' : farm.status === 'Inactive' ? 'red' : 'orange'
-                        }}>
-                          {farm.status}
-                        </div>
+                        Area: {farm.area}
+                      </div>
+                    </div>
+                    
+                    {/* Right side - Status */}
+                    <div style={{
+                      flexShrink: 0,
+                      marginLeft: '1rem',
+                      textAlign: 'right'
+                    }}>
+                      <div style={{
+                        fontSize: '0.6rem',
+                        fontWeight: 500,
+                        color: farm.status === 'Active' ? 'green' : farm.status === 'Inactive' ? 'red' : 'orange'
+                      }}>
+                        {farm.status}
                       </div>
                     </div>
                   </div>

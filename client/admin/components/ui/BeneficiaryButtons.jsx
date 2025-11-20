@@ -334,6 +334,74 @@ export const ViewModeButton = ({
   );
 };
 
+export const AddCoordinateButton = ({
+  children,
+  onClick,
+  disabled = false,
+  icon,
+  fontSize,
+  padding,
+  borderRadius,
+  style = {},
+}) => {
+  // Core button styles for add coordinate button
+  const buttonStyles = {
+    padding: padding || '5px 10px',
+    fontSize: fontSize || '11px',
+    borderRadius: borderRadius || '4px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    fontWeight: 500,
+    border: '1px solid var(--dark-green)',
+    backgroundColor: 'var(--pagination-hover)',
+    color: 'var(--dark-green)',
+    opacity: disabled ? 0.6 : 1,
+    transition: 'all 0.2s ease',
+    marginTop: '6px',
+    ...style,
+  };
+
+  // Mouse interactions for click animation
+  const handleMouseDown = (e) => {
+    if (!disabled) {
+      e.currentTarget.style.transform = 'scale(0.96)';
+    }
+  };
+
+  const handleMouseUp = (e) => {
+    if (!disabled) {
+      e.currentTarget.style.transform = 'scale(1)';
+    }
+  };
+
+  const handleMouseLeave = (e) => {
+    if (!disabled) {
+      e.currentTarget.style.transform = 'scale(1)';
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={!disabled ? onClick : undefined}
+      disabled={disabled}
+      style={buttonStyles}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
+    >
+      {/* Optional icon slot */}
+      {icon && <span style={{ display: 'flex', alignItems: 'center' }}>{icon}</span>}
+
+      {/* Button text or children */}
+      {children || '+ Add Coordinate Point'}
+    </button>
+  );
+};
+
 export const ActionButton = ({
   children,
   onClick,
@@ -422,5 +490,3 @@ export const ActionButton = ({
     </button>
   );
 };
-
-export default AddButton;

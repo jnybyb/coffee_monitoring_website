@@ -5,6 +5,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import MapDetails from './MapDetails';
 import MapStyleSelector from '../../ui/MapStyleSelector';
+import AddFarmPlotModal from './AddFarmPlotModal';
 
 // Fix for default marker icons in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -16,6 +17,7 @@ L.Icon.Default.mergeOptions({
 
 const Farm_Monitoring = () => {
   const [mapStyle, setMapStyle] = useState('openstreetmap');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const mapRef = useRef(null);
 
   // Sample farm plot data (this would come from API in a real implementation)
@@ -55,6 +57,25 @@ const Farm_Monitoring = () => {
   // Handle map style change
   const handleMapStyleChange = (style) => {
     setMapStyle(style);
+  };
+
+  // Handle add farm plot modal
+  const handleAddFarmPlot = () => {
+    setIsAddModalOpen(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setIsAddModalOpen(false);
+  };
+
+  const handleSubmitFarmPlot = async (plotData) => {
+    try {
+      // TODO: Implement API call to save farm plot
+      console.log('Farm plot data:', plotData);
+      // After successful submission, you can refresh the farm plots list
+    } catch (error) {
+      console.error('Error saving farm plot:', error);
+    }
   };
 
   return (
@@ -121,6 +142,7 @@ const Farm_Monitoring = () => {
               <span>Import</span>
             </button>
             <button
+              onClick={handleAddFarmPlot}
               style={{
                 padding: '0.4rem 1.3rem',
                 backgroundColor: 'var(--dark-green)',
@@ -133,7 +155,11 @@ const Farm_Monitoring = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
+                transition: 'all 0.1s ease',
               }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(1)'}
             >
               <RiAddLargeFill size={10} />
               <span>Add Farm Plot</span>
@@ -223,6 +249,15 @@ const Farm_Monitoring = () => {
           </div>
         </div>
       </div>
+
+      {/* Add Farm Plot Modal */}
+      <AddFarmPlotModal
+        isOpen={isAddModalOpen}
+        onClose={handleCloseAddModal}
+        onSubmit={handleSubmitFarmPlot}
+        beneficiaries={[]} // TODO: Pass actual beneficiaries data
+        selectedBeneficiary={null}
+      />
     </div>
   );
 };

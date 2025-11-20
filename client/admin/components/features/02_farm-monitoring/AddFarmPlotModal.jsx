@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { InputField, SelectField } from '../../ui/FormFields';
+import { CancelButton, SaveButton, AddCoordinateButton } from '../../ui/BeneficiaryButtons';
 
 const modalStyle = {
   position: 'fixed',
@@ -15,15 +17,14 @@ const modalStyle = {
 
 const formStyle = {
   backgroundColor: 'white',
-  borderRadius: 8,
-  padding: '0 1rem ',
-  maxWidth: '480px',
+  borderRadius: '5px',
+  padding: '0 0.75rem',
+  maxWidth: '450px',
   width: '85%',
   maxHeight: '90vh',
   overflowY: 'auto',
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
   position: 'relative',
-  // Hide scrollbar similarly to AddBeneficiaryModal
   scrollbarWidth: 'none',
   msOverflowStyle: 'none',
 };
@@ -32,8 +33,8 @@ const headerStyle = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  borderBottom: '.5px solid #e9ecef',
-  padding: '1.50rem 1.25rem',
+  borderBottom: '.5px solid var(--border-gray)',
+  padding: '1.4rem 1rem',
   background: 'white',
   position: 'sticky',
   top: 0,
@@ -44,11 +45,11 @@ const closeBtnStyle = {
   background: 'none',
   border: 'none',
   fontSize: 30,
-  color: '#6c757d',
+  color: 'var(--gray-icon)',
   cursor: 'pointer',
   padding: 0,
-  width: 30,
-  height: 30,
+  width: 28,
+  height: 28,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -57,147 +58,91 @@ const closeBtnStyle = {
 
 const labelStyle = {
   fontWeight: 500,
-  fontSize: 13,
-  marginBottom: 4,
+  fontSize: 11,
+  marginBottom: '0.5rem',
   display: 'block',
 };
 
-const inputStyle = {
-  width: '100%',
-  padding: '10px 12px',
-  borderRadius: 6,
-  border: '1px solid #ccc',
-  fontSize: 12,
-  marginBottom: 0,
-  background: 'white',
-};
-
-// Slightly more compact inputs for coordinate fields
-const coordInputBoxStyle = {
-  ...inputStyle,
-  padding: '6px 10px',
-};
-
 const readOnlyInputStyle = {
-  ...inputStyle,
+  width: '100%',
+  padding: '6px 10px',
+  borderRadius: 4,
+  border: '1px solid var(--border-gray)',
+  fontSize: 11,
+  marginBottom: 0,
   background: '#f5f5f5',
-  color: '#888',
+  color: 'var(--dark-text)',
   cursor: 'not-allowed',
-};
-
-const selectStyle = {
-  ...inputStyle,
-  padding: '10px 32px 10px 12px',
-  appearance: 'none',
-  WebkitAppearance: 'none',
-  MozAppearance: 'none',
-  backgroundImage:
-    "url('data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\' fill=\\'%236c757d\\'><path d=\\'M7 10l5 5 5-5\\'/></svg>')",
-  backgroundRepeat: 'no-repeat',
-  backgroundPosition: 'right 12px center',
-  backgroundSize: '14px',
+  height: '30px',
+  boxSizing: 'border-box',
 };
 
 const buttonRowStyle = {
   display: 'flex',
-  gap: '1rem',
+  gap: '0.75rem',
   justifyContent: 'flex-end',
-  paddingTop: '1rem',
-  borderTop: '1px solid #e9ecef'
-};
-
-const cancelBtnStyle = {
-  background: '#eee',
-  border: 'none',
-  borderRadius: 6,
-  padding: '8px 16px',
-  color: '#333',
-  fontWeight: 500,
-  cursor: 'pointer',
-  fontSize: 12,
-};
-
-const saveBtnStyle = {
-  background: '#2d7c4a',
-  border: 'none',
-  borderRadius: 6,
-  padding: '8px 16px',
-  color: 'white',
-  fontWeight: 500,
-  cursor: 'pointer',
-  fontSize: 12,
-};
-
-const addButtonStyle = {
-  background: '#e8f5e8',
-  border: '1px solid #2d7c4a',
-  borderRadius: 6,
-  padding: '6px 12px',
-  color: '#2d7c4a',
-  fontWeight: 500,
-  cursor: 'pointer',
-  fontSize: 12,
-  marginTop: 8,
+  paddingTop: '0.75rem',
+  borderTop: '1px solid var(--border-gray)'
 };
 
 const coordinateRowStyle = {
   display: 'flex',
-  gap: 8,
+  gap: 6,
   alignItems: 'flex-start',
-  padding: '8px 12px',
+  padding: '6px 10px',
   backgroundColor: '#f8f9fa',
-  borderRadius: 6,
-  marginBottom: 8,
-  border: '1px solid #e9ecef',
+  borderRadius: 4,
+  marginBottom: 6,
+  border: '1px solid var(--border-gray)',
 };
 
 const removeButtonStyle = {
-  background: '#dc3545',
+  background: 'var(--red)',
   border: 'none',
   borderRadius: 4,
-  padding: '4px 8px',
-  color: 'white',
+  padding: '3px 6px',
+  color: 'var(--white)',
   cursor: 'pointer',
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 'bold',
-  minWidth: '24px',
-  height: '24px',
+  minWidth: '20px',
+  height: '20px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  marginTop: '20px',
+  marginTop: '16px',
 };
 
 const sectionTitleStyle = {
-  fontSize: 13,
+  fontSize: 11,
   fontWeight: 600,
-  color: '#2c5530',
-  marginTop: 16,
+  color: 'var(--dark-green)',
+  marginTop: 12,
 };
 
 const pointTitleStyle = {
-  fontSize: 12,
+  fontSize: 10,
   fontWeight: 600,
-  color: '#2c5530',
-  marginBottom: 8,
+  color: 'var(--dark-green)',
+  marginBottom: 2,
 };
 
 const coordinateInputStyle = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 8,
+  gap: 6,
   flex: 1,
 };
 
 const coordinateFieldsStyle = {
   display: 'flex',
-  gap: 8,
+  gap: 6,
   alignItems: 'flex-start',
 };
 
 const twoColRowStyle = {
   display: 'flex',
-  gap: 8,
+  gap: 6,
 };
 
 const twoColColStyle = {
@@ -205,10 +150,10 @@ const twoColColStyle = {
 };
 
 const formBodyStyle = {
-  padding: '1.25rem',
+  padding: '1rem',
   display: 'flex',
   flexDirection: 'column',
-  gap: 18,
+  gap: 12,
 };
 
 // Helper function to convert DMS to Decimal Degrees
@@ -405,13 +350,13 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
       <form style={formStyle} onSubmit={handleSubmit} className="hide-scrollbar-modal">
         {/* Modal Header */}
         <div style={headerStyle}>
-          <h2 style={{ color: 'var(--black)', margin: 0, fontSize: '1.4rem', fontWeight: 600 }}>Add Farm Plot</h2>
+          <h2 style={{ color: 'var(--dark-green)', margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>Add Farm Plot</h2>
           <button
             type="button"
             onClick={onClose}
             style={closeBtnStyle}
             aria-label="Close"
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
+            onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--border-gray)'}
             onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
           >
             ×
@@ -421,30 +366,33 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
         <div style={formBodyStyle}>
         <div style={twoColRowStyle}>
           <div style={twoColColStyle}>
-            <label style={labelStyle}>Beneficiary Full Name</label>
             {selectedBeneficiary ? (
-              <input
-                style={readOnlyInputStyle}
-                value={selectedBeneficiary.fullName || selectedBeneficiary.name || `${selectedBeneficiary.firstName || ''} ${selectedBeneficiary.middleName || ''} ${selectedBeneficiary.lastName || ''}`.trim()}
-                readOnly
-                tabIndex={-1}
-              />
+              <div>
+                <label style={labelStyle}>Beneficiary Full Name</label>
+                <input
+                  style={readOnlyInputStyle}
+                  value={selectedBeneficiary.fullName || selectedBeneficiary.name || `${selectedBeneficiary.firstName || ''} ${selectedBeneficiary.middleName || ''} ${selectedBeneficiary.lastName || ''}`.trim()}
+                  readOnly
+                  tabIndex={-1}
+                />
+              </div>
             ) : (
-              <select
-                style={selectStyle}
-                value={selectedId}
-                onChange={e => setSelectedId(e.target.value)}
-                required
-              >
-                <option value="">Select beneficiary</option>
-                {beneficiaries?.map(b => (
-                  <option key={b.beneficiaryId || b.id} value={b.beneficiaryId || b.id}>
-                    {b.fullName || b.name || `${b.firstName || ''} ${b.middleName || ''} ${b.lastName || ''}`.trim()}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <SelectField
+                  name="beneficiaryId"
+                  label="Beneficiary Full Name"
+                  value={selectedId}
+                  onChange={e => setSelectedId(e.target.value)}
+                  options={beneficiaries?.map(b => ({
+                    value: b.beneficiaryId || b.id,
+                    label: b.fullName || b.name || `${b.firstName || ''} ${b.middleName || ''} ${b.lastName || ''}`.trim()
+                  })) || []}
+                  placeholder="Select beneficiary"
+                  required
+                  error={errors.selectedId}
+                />
+              </div>
             )}
-            {errors.selectedId && !selectedBeneficiary && <div style={{ color: '#c00', fontSize: 12 }}>{errors.selectedId}</div>}
           </div>
           <div style={twoColColStyle}>
             <label style={labelStyle}>Beneficiary ID</label>
@@ -469,7 +417,7 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
 
             <div>
           <div style={sectionTitleStyle}>Plot Boundary Coordinates</div>
-          <p style={{ fontSize: 10, color: '#666', marginBottom: 15 }}>
+          <p style={{ fontSize: 8.5, color: 'var(--dark-text)', marginBottom: 10 }}>
             Add coordinate points to define the plot boundary. Minimum 3 points required.
           </p>
           
@@ -479,26 +427,28 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
                 <div style={pointTitleStyle}>Point {index + 1}</div>
                 <div style={coordinateFieldsStyle}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ ...labelStyle, fontSize: 11 }}>Latitude</label>
-                <input
-                      style={coordInputBoxStyle}
-                      type="text"
+                    <InputField
+                      name={`lat-${index}`}
+                      label="Latitude"
                       value={coord.lat}
                       onChange={e => updateCoordinate(index, 'lat', e.target.value)}
                       placeholder=" "
+                      labelFontSize="9px"
+                      labelMarginBottom="2px"
                     />
-              </div>
+                  </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ ...labelStyle, fontSize: 11 }}>Longitude</label>
-                <input
-                      style={coordInputBoxStyle}
-                      type="text"
+                    <InputField
+                      name={`lng-${index}`}
+                      label="Longitude"
                       value={coord.lng}
                       onChange={e => updateCoordinate(index, 'lng', e.target.value)}
                       placeholder=" "
+                      labelFontSize="9px"
+                      labelMarginBottom="2px"
                     />
-              </div>
-            </div>
+                  </div>
+                </div>
           </div>
               {coordinates.length > 3 && (
           <button
@@ -513,28 +463,31 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
             </div>
           ))}
           
-          <button type="button" style={addButtonStyle} onClick={addCoordinate}>
+          <AddCoordinateButton onClick={addCoordinate}>
             + Add Coordinate Point
-          </button>
+          </AddCoordinateButton>
           
-          {errors.coordinates && <div style={{ color: '#c00', fontSize: 12, marginTop: 8 }}>{errors.coordinates}</div>}
+          {errors.coordinates && <div style={{ color: 'var(--red-error)', fontSize: 10, marginTop: 6 }}>{errors.coordinates}</div>}
         </div>
 
-        <div style={{ ...buttonRowStyle, padding: '0.75rem 1.25rem 1.25rem 1.25rem' }}>
-          <button type="button" style={cancelBtnStyle} onClick={onClose} disabled={isLoading}>
-            Cancel
-          </button>
-          <button 
-            type="submit" 
-            style={{ 
-              ...saveBtnStyle, 
-              opacity: isLoading ? 0.6 : 1,
-              cursor: isLoading ? 'not-allowed' : 'pointer'
-            }} 
+        <div style={{ ...buttonRowStyle, padding: '1rem 0 1rem 1rem' }}>
+          <CancelButton 
+            onClick={onClose} 
             disabled={isLoading}
+            fontSize="11px"
+            padding="10px 18px"
+            borderRadius="5px"
+          >
+            Cancel
+          </CancelButton>
+          <SaveButton 
+            disabled={isLoading}
+            fontSize="11px"
+            padding="10px 18px"
+            borderRadius="5px"
           >
             {isLoading ? 'Saving...' : 'Save Plot'}
-          </button>
+          </SaveButton>
         </div>
         </div>
       </form>
@@ -544,14 +497,4 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
 
 export default AddFarmPlotModal;
 
-<style>
-{`
-.hide-scrollbar-modal::-webkit-scrollbar {
-  display: none;
-}
-.hide-scrollbar-modal {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
-}
-`}
-</style>
+
