@@ -44,30 +44,14 @@ const ProtectedRoute = ({ children }) => {
     validateAuth();
   }, []);
 
-  // Show loading state while validating
-  if (isValidating) {
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        backgroundColor: '#f8f9fa'
-      }}>
-        <div style={{
-          textAlign: 'center',
-          color: 'var(--dark-green)',
-          fontSize: '1rem'
-        }}>
-          Validating session...
-        </div>
-      </div>
-    );
+  // If not authenticated, redirect to login page
+  if (!isAuthenticated && !isValidating) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
-  // If not authenticated, redirect to login page
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  // Show nothing while validating (no loading screen)
+  if (isValidating) {
+    return null;
   }
   
   // If authenticated, render the protected content

@@ -1,94 +1,97 @@
 import React, { useState, useEffect } from 'react';
+import { statisticsAPI } from '../../../services/api';
+import { FaMapMarkedAlt } from 'react-icons/fa';
+import { HiUsers } from 'react-icons/hi2';
+import { BsClipboard2DataFill } from 'react-icons/bs';
+import { GiCoffeeBeans } from 'react-icons/gi';
+import { PiPlantFill } from 'react-icons/pi';
 
-const RecentActivities = ({ active }) => {
+const RecentActivities = ({ active, limit = 10, showViewAll = false }) => {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  // Fetch recent activities from the database
+  const fetchActivities = async () => {
+    try {
+      setError(null);
+      const data = await statisticsAPI.getRecentActivities(limit);
+      setActivities(data);
+    } catch (err) {
+      console.error('Error fetching recent activities:', err);
+      setError('Failed to load activities');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch on mount
   useEffect(() => {
-    const initializeActivities = () => {
-      try {
-        setLoading(true);
-        
-        // Mock recent activities data - in a real app, this would come from an API
-        const mockActivities = [
-          {
-            id: 1,
-            action: 'New beneficiary John Doe added.',
-            user: 'Admin',
-            timestamp: '9/27/2025, 9:51:26 AM',
-            type: 'beneficiary'
-          },
-          {
-            id: 2,
-            action: 'Crop status updated for Farm Plot A.',
-            user: 'Admin',
-            timestamp: '9/27/2025, 9:45:12 AM',
-            type: 'crop'
-          },
-          {
-            id: 3,
-            action: 'Seedling distribution recorded for Plot B.',
-            user: 'Admin',
-            timestamp: '9/27/2025, 9:30:45 AM',
-            type: 'seedling'
-          },
-          {
-            id: 4,
-            action: 'Farm plot coordinates updated.',
-            user: 'Admin',
-            timestamp: '9/27/2025, 9:15:33 AM',
-            type: 'plot'
-          },
-          {
-            id: 5,
-            action: 'New beneficiary Maria Santos added.',
-            user: 'Admin',
-            timestamp: '9/27/2025, 8:58:17 AM',
-            type: 'beneficiary'
-          }
-        ];
-        
-        setActivities(mockActivities);
-      } catch (err) {
-        console.error('Error initializing activities:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchActivities();
+  }, []);
 
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchActivities();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Refresh when Dashboard becomes active
+  useEffect(() => {
     if (active === 'Dashboard') {
-      initializeActivities();
+      fetchActivities();
     }
   }, [active]);
+
+  const getActivityTitle = (type) => {
+    switch (type) {
+      case 'beneficiary':
+        return 'Coffee Beneficiary';
+      case 'crop':
+        return 'Crop Survey Status';
+      case 'seedling':
+        return 'Seedling Record';
+      case 'plot':
+        return 'Farm Monitoring';
+      case 'report':
+        return 'Reports';
+      default:
+        return 'Reports';
+    }
+  };
 
   const getActivityIcon = (type) => {
     switch (type) {
       case 'beneficiary':
-        return '👤';
+        return <HiUsers />;
       case 'crop':
-        return '🌱';
+        return <PiPlantFill />;
       case 'seedling':
-        return '🌿';
+        return <GiCoffeeBeans />;
       case 'plot':
-        return '📍';
+        return <FaMapMarkedAlt />;
+      case 'report':
+        return <BsClipboard2DataFill />;
       default:
-        return '📝';
+        return <BsClipboard2DataFill />;
     }
   };
 
-  const getActivityColor = (type) => {
-    switch (type) {
-      case 'beneficiary':
-        return 'var(--bright-green)';
-      case 'crop':
-        return 'var(--lime-green)';
-      case 'seedling':
-        return 'var(--primary-blue)';
-      case 'plot':
-        return 'var(--primary-green)';
-      default:
-        return 'var(--text-gray)';
-    }
+  // Format timestamp to readable format
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return 'N/A';
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', {
+      month: 'numeric',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
   if (loading) {
@@ -98,12 +101,43 @@ const RecentActivities = ({ active }) => {
         padding: '2rem', 
         borderRadius: '6px', 
         boxShadow: '0 2px 8px var(--shadow-subtle)', 
-        border: '1px solid var(--light-border)',
+        border: '1px solid var(--border-gray)',
         textAlign: 'center'
       }}>
-        <p style={{ color: 'var(--primary-green)', fontSize: '1rem' }}>
+        <p style={{ color: 'var(--dark-green)', fontSize: '1rem' }}>
           Loading recent activities...
         </p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ 
+        background: 'var(--white)', 
+        padding: '2rem', 
+        borderRadius: '6px', 
+        boxShadow: '0 2px 8px var(--shadow-subtle)', 
+        border: '1px solid var(--border-gray)',
+        textAlign: 'center'
+      }}>
+        <p style={{ color: 'var(--danger-red)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+          {error}
+        </p>
+        <button
+          onClick={fetchActivities}
+          style={{
+            padding: '0.5rem 1rem',
+            backgroundColor: 'var(--dark-green)',
+            color: 'var(--white)',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '0.75rem'
+          }}
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -111,20 +145,20 @@ const RecentActivities = ({ active }) => {
   return (
     <div style={{ 
       background: 'var(--white)', 
-      padding: '1rem', 
+      padding: '0.7rem', 
       borderRadius: '6px', 
       boxShadow: '0 2px 8px var(--shadow-subtle)', 
-      border: '1px solid var(--light-border)',
-      height: '100%', // Fill the entire height of the parent container
+      border: '1px solid var(--border-gray)',
+      height: '100%',
       display: 'flex',
       flexDirection: 'column'
     }}>
       {/* Title */}
       <h3 style={{ 
-        color: 'var(--primary-green)', 
+        color: 'var(--dark-green)', 
         fontSize: '1rem', 
         fontWeight: 600, 
-        margin: '0 0 1rem 0'
+        margin: '0 0 0.5rem 0'
       }}>
         Recent Activity
       </h3>
@@ -133,71 +167,140 @@ const RecentActivities = ({ active }) => {
       <div style={{ 
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.75rem',
+        gap: '0.5rem',
         flex: 1,
         overflowY: 'auto',
         paddingRight: '0.25rem'
       }}>
-        {activities.map((activity) => (
-          <div key={activity.id} style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '0.75rem',
-            padding: '0.75rem',
-            borderRadius: '4px',
-            backgroundColor: 'var(--light-gray)',
-            border: '1px solid var(--light-border)'
+        {activities.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '2rem',
+            color: 'var(--text-gray)',
+            fontSize: '0.875rem'
           }}>
-            {/* Activity Icon */}
-            <div style={{
-              fontSize: '1rem',
-              marginTop: '0.1rem',
-              flexShrink: 0
-            }}>
-              {getActivityIcon(activity.type)}
-            </div>
-            
-            {/* Activity Content */}
-            <div style={{ flex: 1 }}>
-              <p style={{
-                margin: '0 0 0.25rem 0',
-                fontSize: '0.8rem',
-                color: 'var(--text-gray)',
-                lineHeight: '1.3'
-              }}>
-                {activity.action}
-              </p>
-              <p style={{
-                margin: 0,
-                fontSize: '0.7rem',
-                color: 'var(--medium-gray)',
-                fontWeight: '500'
-              }}>
-                {activity.user} - {activity.timestamp}
-              </p>
-            </div>
+            No recent activities found
           </div>
-        ))}
+        ) : (
+          activities.map((activity) => (
+            <div 
+              key={activity.id} 
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                padding: '0.75rem',
+                borderRadius: '4px',
+                backgroundColor: 'var(--white)',
+                border: '1px solid var(--dark-brown)',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--mint-green)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--white)';
+              }}
+            >
+              {/* Top row: Icon and Content */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'row',
+                gap: '0.5rem'
+              }}>
+                {/* Icon */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1rem',
+                  color: 'var(--dark-green)',
+                  flexShrink: 0,
+                  width: '1.5rem',
+                  height: '1.5rem',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--light-gray)',
+                  border: '1px solid var(--dark-brown)'
+                }}>
+                  {getActivityIcon(activity.type)}
+                </div>
+                
+                {/* Title, Subtitle, and Timestamp in vertical column */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.25rem',
+                  flex: 1
+                }}>
+                  {/* Title */}
+                  <div style={{
+                    fontSize: '0.65rem',
+                    fontWeight: '700',
+                    color: 'var(--dark-green)'
+                  }}>
+                    {getActivityTitle(activity.type)}
+                  </div>
+                  
+                  {/* Subtitle */}
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--dark-brown)',
+                    lineHeight: '1',
+                    fontWeight: '400'
+                  }}>
+                    {activity.action}
+                  </div>
+                  
+                  {/* Timestamp */}
+                  <div style={{
+                    fontSize: '0.55rem',
+                    marginTop: '0.25rem',
+                    color: 'var(--dark-text)',
+                    fontWeight: '400'
+                  }}>
+                    {formatTimestamp(activity.timestamp)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
       
       {/* View All Link */}
-      <div style={{
-        marginTop: 'auto',
-        paddingTop: '1rem',
-        textAlign: 'center'
-      }}>
-        <button style={{
-          background: 'none',
-          border: 'none',
-          color: 'var(--primary-green)',
-          fontSize: '0.8rem',
-          fontWeight: '500',
-          cursor: 'pointer',
-          textDecoration: 'underline'
-        }}>
-          View All Activities
-        </button>
-      </div>
+      {showViewAll && activities.length > 0 && (
+        <div
+          style={{
+            marginTop: '1rem',
+            textAlign: 'center',
+            fontSize: '0.75rem',
+            fontWeight: '600',
+            color: 'var(--dark-green)',
+            textDecoration: 'underline',
+            cursor: 'pointer',
+            transition: 'color 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = 'var(--olive-green)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'var(--dark-green)';
+          }}
+          onClick={() => {
+            // Store flag in sessionStorage to indicate Recents tab should be active
+            sessionStorage.setItem('reportsActiveTab', 'Recents');
+            
+            // Dispatch custom event to navigate to Reports page
+            const event = new CustomEvent('navigateToReports', {
+              detail: { activeTab: 'Recents' }
+            });
+            window.dispatchEvent(event);
+          }}
+        >
+          View All
+        </div>
+      )}
     </div>
   );
 };

@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { FaChartPie } from "react-icons/fa";
+import { MdBarChart } from "react-icons/md";
 
 const LineGraph = ({ active }) => {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [chartType, setChartType] = useState('bar'); // 'bar' or 'pie'
 
   useEffect(() => {
     const initializeChartData = () => {
@@ -46,10 +49,10 @@ const LineGraph = ({ active }) => {
         padding: '2rem', 
         borderRadius: '6px', 
         boxShadow: '0 2px 8px var(--shadow-subtle)', 
-        border: '1px solid var(--light-border)',
+        border: '1px solid var(--border-gray)',
         textAlign: 'center'
       }}>
-        <p style={{ color: 'var(--primary-green)', fontSize: '1rem' }}>
+        <p style={{ color: 'var(--dark-green)', fontSize: '1rem' }}>
           Loading chart data...
         </p>
       </div>
@@ -63,7 +66,7 @@ const LineGraph = ({ active }) => {
         padding: '2rem', 
         borderRadius: '6px', 
         boxShadow: '0 2px 8px var(--shadow-subtle)', 
-        border: '1px solid var(--light-border)',
+        border: '1px solid var(--border-gray)',
         textAlign: 'center'
       }}>
         <p style={{ color: 'var(--danger-red)', fontSize: '1rem' }}>
@@ -79,105 +82,174 @@ const LineGraph = ({ active }) => {
       padding: '1rem', 
       borderRadius: '6px', 
       boxShadow: '0 2px 8px var(--shadow-subtle)', 
-      border: '1px solid var(--light-border)'
+      border: '1px solid var(--border-gray)',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column'
     }}>
-      <div style={{ marginBottom: '0.75rem' }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: '0.75rem' 
+      }}>
         <h3 style={{ 
-          color: 'var(--primary-green)', 
-          fontSize: '1rem', 
+          color: 'var(--dark-green)', 
+          fontSize: '0.9rem', 
           fontWeight: 600, 
-          margin: '0 0 0.25rem 0' 
-        }}>
-          Coffee Monitoring Trends
-        </h3>
-        <p style={{ 
-          color: 'var(--text-gray)', 
-          fontSize: '0.8rem', 
           margin: 0 
         }}>
-          Monthly overview of beneficiaries, seedlings distributed, and crop status
-        </p>
-      </div>
-      
-      <div style={{ height: '280px', width: '100%' }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={chartData}
-            margin={{
-              top: 15,
-              right: 20,
-              left: 15,
-              bottom: 15,
+          Trend Monitoring
+        </h3>
+        
+        {/* Chart Type Toggle Buttons */}
+        <div style={{ display: 'flex' }}>
+          <button 
+            onClick={() => setChartType('pie')}
+            style={{
+              padding: '0.5rem',
+              backgroundColor: 'transparent',
+              color: chartType === 'pie' ? 'var(--dark-green)' : 'var(--text-gray)',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '1.4rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease'
             }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--light-border)" />
-            <XAxis 
-              dataKey="month" 
-              stroke="var(--text-gray)"
-              fontSize={10}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis 
-              stroke="var(--text-gray)"
-              fontSize={10}
-              tickLine={false}
-              axisLine={false}
-            />
-            <Tooltip 
-              contentStyle={{
-                backgroundColor: 'var(--white)',
-                border: '1px solid var(--light-border)',
-                borderRadius: '6px',
-                boxShadow: '0 4px 12px var(--shadow-subtle)',
-                fontSize: '0.8rem'
+            <FaChartPie />
+          </button>
+          <button 
+            onClick={() => setChartType('bar')}
+            style={{
+              padding: '0.5rem',
+              backgroundColor: 'transparent',
+              color: chartType === 'bar' ? 'var(--dark-green)' : 'var(--text-gray)',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '1.4rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <MdBarChart />
+          </button>
+        </div>
+      </div>
+      
+      <div style={{ height: '100%', width: '100%', flex: 1 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          {chartType === 'bar' ? (
+            <BarChart
+              data={chartData}
+              margin={{
+                top: 10,
+                right: 10,
+                left: -20,
+                bottom: 0,
               }}
-              labelStyle={{ color: 'var(--primary-green)', fontWeight: 600 }}
-            />
-            <Legend 
-              wrapperStyle={{ 
-                paddingTop: '0.75rem',
-                fontSize: '0.8rem'
-              }}
-            />
-            <Line 
-              type="monotone" 
-              dataKey="beneficiaries" 
-              stroke="var(--bright-green)" 
-              strokeWidth={2}
-              dot={{ fill: 'var(--bright-green)', strokeWidth: 1, r: 3 }}
-              activeDot={{ r: 4, stroke: 'var(--bright-green)', strokeWidth: 1 }}
-              name="New Beneficiaries"
-            />
-            <Line 
-              type="monotone" 
-              dataKey="seedlings" 
-              stroke="var(--primary-blue)" 
-              strokeWidth={2}
-              dot={{ fill: 'var(--primary-blue)', strokeWidth: 1, r: 3 }}
-              activeDot={{ r: 4, stroke: 'var(--primary-blue)', strokeWidth: 1 }}
-              name="Seedlings Distributed"
-            />
-            <Line 
-              type="monotone" 
-              dataKey="aliveCrops" 
-              stroke="var(--lime-green)" 
-              strokeWidth={2}
-              dot={{ fill: 'var(--lime-green)', strokeWidth: 1, r: 3 }}
-              activeDot={{ r: 4, stroke: 'var(--lime-green)', strokeWidth: 1 }}
-              name="Alive Crops"
-            />
-            <Line 
-              type="monotone" 
-              dataKey="deadCrops" 
-              stroke="var(--danger-red)" 
-              strokeWidth={2}
-              dot={{ fill: 'var(--danger-red)', strokeWidth: 1, r: 3 }}
-              activeDot={{ r: 4, stroke: 'var(--danger-red)', strokeWidth: 1 }}
-              name="Dead Crops"
-            />
-          </LineChart>
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--light-gray)" vertical={false} />
+              <XAxis 
+                dataKey="month" 
+                stroke="var(--text-gray)"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis 
+                stroke="var(--text-gray)"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+              />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: 'var(--white)',
+                  border: '1px solid var(--border-gray)',
+                  borderRadius: '6px',
+                  boxShadow: '0 4px 12px var(--shadow-subtle)',
+                  fontSize: '0.75rem'
+                }}
+                cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+              />
+              <Bar 
+                dataKey="beneficiaries" 
+                fill="var(--teal)" 
+                radius={[4, 4, 0, 0]}
+                barSize={12}
+              />
+              <Bar 
+                dataKey="seedlings" 
+                fill="var(--olive-green)" 
+                radius={[4, 4, 0, 0]}
+                barSize={12}
+              />
+            </BarChart>
+          ) : (
+            <PieChart>
+              <Pie
+                data={[
+                  { name: 'Beneficiaries', value: chartData.reduce((sum, item) => sum + item.beneficiaries, 0) },
+                  { name: 'Seedlings', value: chartData.reduce((sum, item) => sum + item.seedlings, 0) / 20 }
+                ]}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                outerRadius={130}
+                fill="var(--teal)"
+                dataKey="value"
+              >
+                <Cell fill="var(--teal)" />
+                <Cell fill="var(--olive-green)" />
+              </Pie>
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: 'var(--white)',
+                  border: '1px solid var(--border-gray)',
+                  borderRadius: '6px',
+                  boxShadow: '0 4px 12px var(--shadow-subtle)',
+                  fontSize: '0.75rem'
+                }}
+              />
+            </PieChart>
+          )}
         </ResponsiveContainer>
+      </div>
+
+      {/* Legend */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        gap: '1.5rem'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.7rem', color: 'var(--dark-text)' }}>
+          <div style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--teal)',
+            marginRight: '0.4rem'
+          }}></div>
+          <span>Beneficiaries</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.7rem', color: 'var(--dark-text)' }}>
+          <div style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--olive-green)',
+            marginRight: '0.4rem'
+          }}></div>
+          <span>Seedlings</span>
+        </div>
       </div>
     </div>
   );

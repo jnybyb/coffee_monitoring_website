@@ -260,6 +260,7 @@ const LoginPage = () => {
         message="Welcome back!"
         autoClose={true}
         autoCloseDelay={1500}
+        hideButton={true}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   MdOutlineDashboard,
@@ -55,6 +55,20 @@ const Sidebar = ({ buttonHeight = '55px' }) => {
   const handleNavigation = (item) => {
     navigateToPage(item.label, navigate);
   };
+
+  // Listen for navigation events from other components
+  useEffect(() => {
+    const handleNavigateToReports = (event) => {
+      // Navigate to Reports page
+      navigateToPage('Reports', navigate);
+    };
+
+    window.addEventListener('navigateToReports', handleNavigateToReports);
+
+    return () => {
+      window.removeEventListener('navigateToReports', handleNavigateToReports);
+    };
+  }, [navigate]);
 
   // Main sidebar container styles
   const sidebarStyles = {
