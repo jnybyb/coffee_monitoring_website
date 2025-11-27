@@ -1,91 +1,169 @@
 import React, { useState, useEffect } from 'react';
-import { useAddressData } from '../../../hooks/useAddressData';
 import { calculateAge } from '../../../utils/age';
+import { useAddressData } from '../../../hooks/useAddressData';
 import LoadingModal from '../../ui/LoadingModal';
 import AlertModal from '../../ui/AlertModal';
 import { CancelButton, SaveButton } from '../../ui/BeneficiaryButtons';
 import { InputField, SelectField, DateField } from '../../ui/FormFields';
-import { beneficiariesAPI } from '../../../services/api';
 import { 
   GENDER_OPTIONS, 
-  MARITAL_STATUS_OPTIONS, 
-  INITIAL_BENEFICIARY_FORM_DATA,
+  MARITAL_STATUS_OPTIONS,
   BENEFICIARY_MODAL_STYLES 
 } from '../../../utils/formConstants';
 
 
 
-const AddRecord = ({ isOpen, onClose, onSubmit }) => {
-  const [formData, setFormData] = useState(INITIAL_BENEFICIARY_FORM_DATA);
+const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
+  const [formData, setFormData] = useState({
+    beneficiaryId: '',
+    firstName: '',
+    middleName: '',
+    lastName: '',
+    purok: '',
+    barangay: '',
+    municipality: '',
+    province: '',
+    gender: '',
+    birthDate: '',
+    maritalStatus: '',
+    cellphone: '',
+    age: '',
+    picture: null
+  });
+
   const [errors, setErrors] = useState({});
-  const [submitting, setSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [originalData, setOriginalData] = useState(null);
+  const [hasChanges, setHasChanges] = useState(false);
 
 
+  
+  // Address data hook
   const {
     provinces,
     municipalities,
     barangays,
     loading: addressLoading,
+    error: addressError,
     loadMunicipalities,
     loadBarangays,
     resetMunicipalities,
     resetBarangays
   } = useAddressData();
 
-  // Reset form when modal opens
+  // Initialize form data when beneficiary prop changes or modal opens
   useEffect(() => {
-    if (isOpen) {
-      setFormData(INITIAL_BENEFICIARY_FORM_DATA);
+    if (beneficiary && isOpen) {
+      // Filter out 'unknown' values from address fields
+      const cleanValue = (val) => {
+        if (!val || val.toLowerCase() === 'unknown') return '';
+        return val;
+      };
+      
+      const province = cleanValue(beneficiary.province);
+      const municipality = cleanValue(beneficiary.municipality);
+      const barangay = cleanValue(beneficiary.barangay);
+      
+      // Format birthDate correctly to avoid timezone issues
+      let formattedBirthDate = '';
+      if (beneficiary.birthDate) {
+        const dateStr = beneficiary.birthDate.split('T')[0];
+        formattedBirthDate = dateStr;
+      }
+      
+      const initialData = {
+        beneficiaryId: beneficiary.beneficiaryId || '',
+        firstName: beneficiary.firstName || '',
+        middleName: beneficiary.middleName || '',
+        lastName: beneficiary.lastName || '',
+        purok: beneficiary.purok || '',
+        barangay: barangay,
+        municipality: municipality,
+        province: province,
+        gender: beneficiary.gender || '',
+        birthDate: formattedBirthDate,
+        maritalStatus: beneficiary.maritalStatus || '',
+        cellphone: beneficiary.cellphone || '',
+        age: beneficiary.age || '',
+        picture: null,
+        existingPicture: beneficiary.picture || null
+      };
+      
+      setFormData(initialData);
+      setOriginalData(initialData);
+      setHasChanges(false);
       setErrors({});
-      setSubmitting(false);
       setSubmitError('');
-      setShowSuccessModal(false);
-      loadMunicipalities('Davao Oriental');
+      
+      // Load municipalities and barangays for the existing address only if province exists
+      if (province) {
+        loadMunicipalities(province);
+        if (municipality) {
+          loadBarangays(province, municipality);
+        }
+      }
     }
-  }, [isOpen, loadMunicipalities]);
+  }, [beneficiary, isOpen, loadMunicipalities, loadBarangays]);
 
   const handleInputChange = (e) => {
     const { name, value, files } = e.target;
     
-    if (name === 'picture' && files) {
-      const file = files[0];
-      if (file && file.type.startsWith('image/')) {
-        setFormData(prev => ({ ...prev, [name]: file }));
-      }
-    } else if (name === 'province') {
-      setFormData(prev => ({
-        ...prev,
-        province: value,
-        municipality: '',
-        barangay: ''
-      }));
-      resetMunicipalities();
-      resetBarangays();
-      loadMunicipalities(value);
-    } else if (name === 'municipality') {
-      setFormData(prev => ({
-        ...prev,
-        municipality: value,
-        barangay: ''
-      }));
-      resetBarangays();
-      if (formData.province) {
-        loadBarangays(formData.province, value);
-      }
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
+    let updatedFormData = { ...formData };
     
+    if (name === 'picture' && files) {
+      updatedFormData.picture = files[0];
+      setFormData(updatedFormData);
+      setHasChanges(true); // Picture change always means there are changes
+    } else {
+      updatedFormData[name] = value;
+      
+      // Auto-calculate age when birth date changes
+      if (name === 'birthDate') {
+        const computedAge = value ? calculateAge(value) : null;
+        updatedFormData.age = computedAge == null ? '' : String(computedAge);
+      }
+      
+      setFormData(updatedFormData);
+      
+      // Check if data has changed
+      if (originalData) {
+        const changed = Object.keys(originalData).some(key => {
+          if (key === 'picture') return updatedFormData.picture !== null;
+          if (key === 'existingPicture' || key === 'age') return false;
+          return originalData[key] !== updatedFormData[key];
+        });
+        setHasChanges(changed);
+      }
+      
+      // Handle cascading dropdowns
+      if (name === 'province') {
+        resetMunicipalities();
+        resetBarangays();
+        if (value) {
+          loadMunicipalities(value);
+        }
+      } else if (name === 'municipality') {
+        resetBarangays();
+        if (value && formData.province) {
+          loadBarangays(formData.province, value);
+        }
+      }
+    }
+
+    // Clear error for this field
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     // Only First Name, Last Name, and Purok are required
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
@@ -108,20 +186,21 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
     return Object.keys(newErrors).length === 0;
   };
 
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) return;
-    if (submitting) return;
-    
+    if (isSubmitting) return;
+
     try {
-      setSubmitting(true);
+      setIsSubmitting(true);
       setSubmitError('');
 
       const age = calculateAge(formData.birthDate) ?? 0;
-
-      const payload = {
-        beneficiaryId: formData.beneficiaryId?.trim() || null,
+      
+      const updateData = {
         firstName: formData.firstName,
         middleName: formData.middleName,
         lastName: formData.lastName,
@@ -133,34 +212,27 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
         birthDate: formData.birthDate || null,
         age,
         maritalStatus: formData.maritalStatus || null,
-        cellphoneNumber: formData.cellphone || null,
+        cellphone: formData.cellphone || null,
         picture: formData.picture
       };
-
-      const result = await beneficiariesAPI.create(payload);
       
-      if (typeof onSubmit === 'function') {
-        await onSubmit(result);
-      }
+      await onSubmit(updateData);
       
-      setFormData(INITIAL_BENEFICIARY_FORM_DATA);
-      setErrors({});
-      setSubmitError('');
-      
-      // Show success modal for 2.5 seconds
+      // Show success modal instead of closing immediately
       setShowSuccessModal(true);
     } catch (err) {
-      console.error('Failed to add record:', err);
-      setSubmitError(err?.message || 'Failed to add record.');
+      console.error('Failed to update beneficiary:', err);
+      setSubmitError(err?.message || 'Failed to update beneficiary.');
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleClose = () => {
-    setFormData(INITIAL_BENEFICIARY_FORM_DATA);
     setErrors({});
     setSubmitError('');
+    setShowSuccessModal(false);
+    setHasChanges(false);
     onClose();
   };
 
@@ -200,14 +272,14 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
           justifyContent: 'space-between',
           alignItems: 'center',
           borderBottom: '.5px solid var(--border-gray)',
-          padding: '1.4rem 1rem',
+          padding: '1.4rem 1.4rem',
           background: 'var(--white)',
           position: 'sticky',
           borderRadius: '5px',
           top: 0,
           zIndex: 10
         }}>
-          <h2 style={{ color: 'var(--dark-green)', margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>Add Beneficiary Record</h2>
+          <h2 style={{ color: 'var(--dark-green)', margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>Edit Beneficiary Record</h2>
           <button
             onClick={handleClose}
             style={{
@@ -309,6 +381,17 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
                         borderRadius: '50%'
                       }}
                     />
+                  ) : formData.existingPicture ? (
+                    <img
+                      src={`http://localhost:5000${formData.existingPicture}`}
+                      alt="Profile"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        borderRadius: '50%'
+                      }}
+                    />
                   ) : (
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="#6c757d">
                       <circle cx="12" cy="8" r="4"/>
@@ -365,6 +448,7 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
                   />
                 </div>
               </div>
+
             
               <DateField
                 name="birthDate"
@@ -451,7 +535,7 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
             }}>
               <CancelButton
                 onClick={handleClose}
-                disabled={submitting}
+                disabled={isSubmitting}
                 fontSize="11px"
                 padding="10px 18px"
                 borderRadius="5px"
@@ -460,12 +544,12 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
               </CancelButton>
               <SaveButton
                 type="submit"
-                disabled={submitting}
+                disabled={isSubmitting || !hasChanges}
                 fontSize="11px"
                 padding="10px 18px"
                 borderRadius="5px"
               >
-                {submitting ? 'Saving...' : 'Save'}
+                {isSubmitting ? 'Updating...' : 'Update'}
               </SaveButton>
             </div>
           </form>
@@ -473,16 +557,16 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
       </div>
     </div>
     )}
-      <LoadingModal isOpen={submitting} title="Saving" message="Adding beneficiary record..." />
+      <LoadingModal isOpen={isSubmitting} title="Updating" message="Updating beneficiary record..." />
       <AlertModal
         isOpen={showSuccessModal}
         onClose={() => {
           setShowSuccessModal(false);
-          onClose && onClose();
+          handleClose();
         }}
         type="success"
         title="Success!"
-        message="Beneficiary record has been added successfully."
+        message="Beneficiary record has been updated successfully."
         autoClose={true}
         autoCloseDelay={1500}
         buttonBorderRadius={4}
@@ -542,4 +626,4 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
   );
 };
 
-export default AddRecord;
+export default EditBeneficiaryModal; 
