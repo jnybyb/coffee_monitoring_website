@@ -1,9 +1,160 @@
 import React, { useState, useEffect } from 'react';
-import { IoClose } from "react-icons/io5";
 import { CancelButton, SaveButton } from '../../ui/BeneficiaryButtons';
 import { beneficiariesAPI, farmPlotsAPI } from '../../../services/api';
 import LoadingModal from '../../ui/LoadingModal';
 import AlertModal from '../../ui/AlertModal';
+
+// Shared styles constants
+const MODAL_STYLES = {
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000
+  },
+  modal: {
+    backgroundColor: 'var(--white)',
+    borderRadius: '5px',
+    width: '90%',
+    maxWidth: '500px',
+    maxHeight: '90vh',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column'
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '.5px solid var(--border-gray)',
+    padding: '1.4rem 1.4rem',
+    background: 'var(--white)',
+    position: 'sticky',
+    borderRadius: '5px',
+    top: 0,
+    zIndex: 10
+  },
+  title: {
+    color: 'var(--dark-green)',
+    margin: 0,
+    fontSize: '1.4rem',
+    fontWeight: 700
+  },
+  closeButton: {
+    background: 'none',
+    border: 'none',
+    fontSize: '37px',
+    color: 'var(--gray-icon)',
+    padding: 0,
+    width: 28,
+    height: 28,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '50%'
+  },
+  scrollArea: {
+    overflowY: 'auto',
+    scrollbarWidth: 'thin',
+    msOverflowStyle: 'none',
+    padding: '0 0.75rem',
+    flex: 1
+  },
+  form: {
+    padding: '1rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px'
+  },
+  footer: {
+    display: 'flex',
+    gap: '0.75rem',
+    justifyContent: 'flex-end',
+    paddingTop: '0.75rem',
+    borderTop: 'rgba(0, 0, 0, 0.035)',
+    marginTop: '12px',
+    padding: '1rem 1.7rem 2rem 1rem'
+  }
+};
+
+const FIELD_STYLES = {
+  wrapper: { marginBottom: '12px' },
+  label: {
+    display: 'block',
+    marginBottom: '0.1rem',
+    fontWeight: '500',
+    color: 'var(--dark-brown)',
+    fontSize: '12px'
+  },
+  labelSmall: {
+    display: 'block',
+    marginBottom: '0.375rem',
+    color: 'var(--dark-green)',
+    fontSize: '0.75rem',
+    fontWeight: '500'
+  },
+  input: {
+    width: '100%',
+    padding: '4px 10px',
+    borderRadius: '4px',
+    fontSize: '13px',
+    backgroundColor: 'var(--white)',
+    color: 'var(--pagination-gray)',
+    height: '36px',
+    boxSizing: 'border-box',
+    transition: 'border-color 0.2s ease'
+  },
+  readOnlyInput: {
+    width: '100%',
+    padding: '4px 10px',
+    border: '1px solid var(--border-gray)',
+    borderRadius: '4px',
+    fontSize: '13px',
+    backgroundColor: 'var(--shadow-transparent)',
+    color: 'var(--dark-text)',
+    cursor: 'not-allowed',
+    height: '36px',
+    boxSizing: 'border-box'
+  },
+  error: {
+    color: 'var(--red)',
+    fontSize: '12px',
+    marginTop: '4px',
+    display: 'block'
+  },
+  errorBox: {
+    backgroundColor: 'var(--danger-red)',
+    color: 'var(--white)',
+    padding: '0.75rem',
+    borderRadius: '4px',
+    margin: '1rem 0.75rem 0 0.75rem',
+    border: '1px solid var(--danger-red)',
+    fontSize: '12px',
+    opacity: 0.9
+  },
+  helpText: {
+    color: 'var(--placeholder-text)',
+    fontSize: '12px',
+    marginTop: '4px',
+    margin: '4px 0 0 0'
+  }
+};
+
+// Helper function to construct full name
+const getFullName = (beneficiary) => {
+  if (beneficiary.fullName) return beneficiary.fullName;
+  const firstName = beneficiary.firstName || '';
+  const middleName = beneficiary.middleName || '';
+  const lastName = beneficiary.lastName || '';
+  return `${firstName} ${middleName} ${lastName}`.trim().replace(/\s+/g, ' ');
+};
 
 const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) => {
   const [formData, setFormData] = useState({
@@ -28,13 +179,22 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
   const [initialFormData, setInitialFormData] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const getFullName = (beneficiary) => {
-    if (beneficiary.fullName) return beneficiary.fullName;
-    const firstName = beneficiary.firstName || '';
-    const middleName = beneficiary.middleName || '';
-    const lastName = beneficiary.lastName || '';
-    return `${firstName} ${middleName} ${lastName}`.trim().replace(/\s+/g, ' ');
-  };
+  const getInputStyle = (hasError) => ({
+    ...FIELD_STYLES.input,
+    border: hasError ? '1px solid var(--red)' : '1px solid var(--border-gray)'
+  });
+
+  const getDateInputStyle = (hasError, value) => ({
+    ...FIELD_STYLES.input,
+    border: hasError ? '1px solid var(--red)' : '1px solid var(--border-gray)',
+    color: value ? 'var(--black)' : 'var(--text-gray)'
+  });
+
+  const getSelectStyle = (hasError, value) => ({
+    ...FIELD_STYLES.input,
+    border: hasError ? '1px solid var(--red)' : '1px solid var(--border-gray)',
+    color: value ? 'var(--pagination-gray)' : 'var(--text-gray)'
+  });
 
   // Fetch plots when beneficiary changes
   useEffect(() => {
@@ -270,29 +430,19 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
 
   return (
     <>
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div className="modal-content" style={{ backgroundColor: 'var(--white)', borderRadius: '5px', width: '90%', maxWidth: '500px', maxHeight: '90vh', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+      <div style={MODAL_STYLES.overlay}>
+      <div className="modal-content" style={MODAL_STYLES.modal}>
         {/* Modal Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '.5px solid var(--border-gray)', padding: '1.4rem 1.4rem', background: 'var(--white)', position: 'sticky', borderRadius: '5px', top: 0, zIndex: 10 }}>
-          <h2 style={{ color: 'var(--dark-green)', margin: 0, fontSize: '1.4rem', fontWeight: 700 }}>
+        <div style={MODAL_STYLES.header}>
+          <h2 style={MODAL_STYLES.title}>
             Edit Seedling Record
           </h2>
           <button
             onClick={handleClose}
             disabled={loading}
             style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '37px',
-              color: 'var(--gray-icon)',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              padding: 0,
-              width: 28,
-              height: 28,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '50%'
+              ...MODAL_STYLES.closeButton,
+              cursor: loading ? 'not-allowed' : 'pointer'
             }}
             onMouseEnter={(e) => !loading && (e.target.style.backgroundColor = 'var(--border-gray)')}
             onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = 'transparent')}
@@ -304,24 +454,24 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
 
         {/* Error Message */}
         {submitError && (
-          <div style={{ backgroundColor: '#f8d7da', color: '#721c24', padding: '0.75rem', borderRadius: '4px', margin: '1rem 0.75rem 0 0.75rem', border: '1px solid #f5c6cb', fontSize: '12px' }}>
+          <div style={FIELD_STYLES.errorBox}>
             <strong style={{ fontSize: '12px' }}>Error:</strong> {submitError}
           </div>
         )}
 
         {/* Scrollable content area */}
-        <div style={{ overflowY: 'auto', scrollbarWidth: 'thin', msOverflowStyle: 'none', padding: '0 0.75rem', flex: 1 }}>
-          <form onSubmit={handleSubmit} style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={MODAL_STYLES.scrollArea}>
+          <form onSubmit={handleSubmit} style={MODAL_STYLES.form}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.375rem', color: '#2c5530', fontSize: '0.75rem', fontWeight: '500' }}>
+                <label style={FIELD_STYLES.labelSmall}>
                   Beneficiary *
                 </label>
                 <select
                   name="beneficiaryName"
                   value={formData.beneficiaryName}
                   onChange={handleInputChange}
-                  style={{ width: '100%', padding: '4px 10px', border: errors.beneficiaryName ? '1px solid var(--red)' : '1px solid var(--border-gray)', borderRadius: '4px', fontSize: '13px', backgroundColor: 'white', color: '#495057', height: '36px', boxSizing: 'border-box', transition: 'border-color 0.2s ease' }}
+                  style={getInputStyle(errors.beneficiaryName)}
                   disabled={loading || beneficiariesLoading}
                 >
                   <option value="" style={{ fontSize: '13px' }}>{beneficiariesLoading ? 'Loading...' : 'Select Beneficiary'}</option>
@@ -336,18 +486,18 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
                   ) : null}
                 </select>
                 {errors.beneficiaryName && (
-                  <span style={{ color: 'var(--red)', fontSize: '12px', marginTop: '4px', display: 'block' }}>{errors.beneficiaryName}</span>
+                  <span style={FIELD_STYLES.error}>{errors.beneficiaryName}</span>
                 )}
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.375rem', color: '#2c5530', fontSize: '0.75rem', fontWeight: '500' }}>
+                <label style={FIELD_STYLES.labelSmall}>
                   Beneficiary ID
                 </label>
                 <input
                   type="text"
                   value={formData.beneficiaryId}
                   readOnly
-                  style={{ width: '100%', padding: '4px 10px', border: '1px solid var(--border-gray)', borderRadius: '4px', fontSize: '13px', backgroundColor: 'rgba(0, 0, 0, 0.03)', color: 'var(--dark-text)', cursor: 'not-allowed', height: '36px', boxSizing: 'border-box' }}
+                  style={FIELD_STYLES.readOnlyInput}
                   placeholder="Auto-populated"
                 />
               </div>
@@ -356,7 +506,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
             {/* Received Seedlings and Date Received */}
             <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', marginBottom: '0.1rem', fontWeight: '500', color: 'var(--dark-brown)', fontSize: '12px' }}>
+                <label style={FIELD_STYLES.label}>
                   Received Seedlings *
                 </label>
                 <input
@@ -365,16 +515,16 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
                   value={formData.received}
                   onChange={handleInputChange}
                   min="1"
-                  style={{ width: '100%', padding: '4px 10px', border: errors.received ? '1px solid var(--red)' : '1px solid var(--border-gray)', borderRadius: '4px', fontSize: '13px', backgroundColor: 'white', color: '#495057', height: '36px', boxSizing: 'border-box', transition: 'border-color 0.2s ease' }}
+                  style={getInputStyle(errors.received)}
                   disabled={loading}
                   placeholder="Enter number"
                 />
                 {errors.received && (
-                  <span style={{ color: 'var(--red)', fontSize: '12px', marginTop: '4px', display: 'block' }}>{errors.received}</span>
+                  <span style={FIELD_STYLES.error}>{errors.received}</span>
                 )}
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', marginBottom: '0.1rem', fontWeight: '500', color: 'var(--dark-brown)', fontSize: '12px' }}>
+                <label style={FIELD_STYLES.label}>
                   Date Received *
                 </label>
                 <input
@@ -382,18 +532,18 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
                   name="dateReceived"
                   value={formData.dateReceived}
                   onChange={handleInputChange}
-                  style={{ width: '100%', padding: '4px 10px', border: errors.dateReceived ? '1px solid var(--red)' : '1px solid var(--border-gray)', borderRadius: '4px', fontSize: '13px', backgroundColor: 'white', color: formData.dateReceived ? 'var(--black)' : '#adb5bd', height: '36px', boxSizing: 'border-box', transition: 'border-color 0.2s ease' }}
+                  style={getDateInputStyle(errors.dateReceived, formData.dateReceived)}
                   disabled={loading}
                   placeholder="Select date"
                 />
                 {errors.dateReceived && (
-                  <span style={{ color: 'var(--red)', fontSize: '12px', marginTop: '4px', display: 'block' }}>{errors.dateReceived}</span>
+                  <span style={FIELD_STYLES.error}>{errors.dateReceived}</span>
                 )}
               </div>
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.375rem', color: '#2c5530', fontSize: '0.75rem', fontWeight: '500' }}>
+              <label style={FIELD_STYLES.labelSmall}>
                 Planted Seedlings *
               </label>
               <input
@@ -403,35 +553,24 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
                 onChange={handleInputChange}
                 min="1"
                 max={formData.received}
-                style={{ width: '100%', padding: '4px 10px', border: errors.planted ? '1px solid var(--red)' : '1px solid var(--border-gray)', borderRadius: '4px', fontSize: '13px', backgroundColor: 'white', color: '#495057', height: '36px', boxSizing: 'border-box', transition: 'border-color 0.2s ease' }}
+                style={getInputStyle(errors.planted)}
                 disabled={loading}
                 placeholder="Enter number"
               />
               {errors.planted && (
-                <span style={{ color: 'var(--red)', fontSize: '12px', marginTop: '4px', display: 'block' }}>{errors.planted}</span>
+                <span style={FIELD_STYLES.error}>{errors.planted}</span>
               )}
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.375rem', color: '#2c5530', fontSize: '0.75rem', fontWeight: '500' }}>
+              <label style={FIELD_STYLES.labelSmall}>
                 Plot ID
               </label>
               <select
                 name="plot"
                 value={formData.plot}
                 onChange={handleInputChange}
-                style={{
-                  width: '100%',
-                  padding: '4px 10px',
-                  border: errors.plot ? '1px solid var(--red)' : '1px solid var(--border-gray)',
-                  borderRadius: '4px',
-                  fontSize: '13px',
-                  backgroundColor: 'white',
-                  color: formData.plot ? '#495057' : '#adb5bd',
-                  height: '36px',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.2s ease'
-                }}
+                style={getSelectStyle(errors.plot, formData.plot)}
                 disabled={loading || plotsLoading || !formData.beneficiaryId}
               >
                 <option value="" style={{ fontSize: '13px' }}>
@@ -444,12 +583,12 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
                 ))}
               </select>
               {errors.plot && (
-                <span style={{ color: 'var(--red)', fontSize: '12px', marginTop: '4px', display: 'block' }}>{errors.plot}</span>
+                <span style={FIELD_STYLES.error}>{errors.plot}</span>
               )}
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.375rem', color: '#2c5530', fontSize: '0.75rem', fontWeight: '500' }}>
+              <label style={FIELD_STYLES.labelSmall}>
                 Date of Planting *
               </label>
               <div style={{ display: 'flex', gap: '6px' }}>
@@ -459,12 +598,12 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
                     name="dateOfPlantingStart"
                     value={formData.dateOfPlantingStart}
                     onChange={handleInputChange}
-                    style={{ width: '100%', padding: '4px 10px', border: errors.dateOfPlantingStart ? '1px solid var(--red)' : '1px solid var(--border-gray)', borderRadius: '4px', fontSize: '13px', backgroundColor: 'white', color: formData.dateOfPlantingStart ? 'var(--black)' : '#adb5bd', height: '36px', boxSizing: 'border-box', transition: 'border-color 0.2s ease' }}
+                    style={getDateInputStyle(errors.dateOfPlantingStart, formData.dateOfPlantingStart)}
                     disabled={loading}
                     placeholder="Start date"
                   />
                   {errors.dateOfPlantingStart && (
-                    <span style={{ color: 'var(--red)', fontSize: '12px', marginTop: '4px', display: 'block' }}>{errors.dateOfPlantingStart}</span>
+                    <span style={FIELD_STYLES.error}>{errors.dateOfPlantingStart}</span>
                   )}
                 </div>
                 <div style={{ flex: 1 }}>
@@ -473,16 +612,16 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
                     name="dateOfPlantingEnd"
                     value={formData.dateOfPlantingEnd}
                     onChange={handleInputChange}
-                    style={{ width: '100%', padding: '4px 10px', border: errors.dateOfPlantingEnd ? '1px solid var(--red)' : '1px solid var(--border-gray)', borderRadius: '4px', fontSize: '13px', backgroundColor: 'white', color: formData.dateOfPlantingEnd ? 'var(--black)' : '#adb5bd', height: '36px', boxSizing: 'border-box', transition: 'border-color 0.2s ease' }}
+                    style={getDateInputStyle(errors.dateOfPlantingEnd, formData.dateOfPlantingEnd)}
                     disabled={loading}
                     placeholder="End date (optional)"
                   />
                   {errors.dateOfPlantingEnd && (
-                    <span style={{ color: 'var(--red)', fontSize: '12px', marginTop: '4px', display: 'block' }}>{errors.dateOfPlantingEnd}</span>
+                    <span style={FIELD_STYLES.error}>{errors.dateOfPlantingEnd}</span>
                   )}
                 </div>
               </div>
-              <p style={{ color: '#6c757d', fontSize: '12px', marginTop: '4px', margin: '4px 0 0 0' }}>
+              <p style={FIELD_STYLES.helpText}>
                 If planting spanned multiple days, provide an end date.
               </p>
             </div>
@@ -490,7 +629,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '0.75rem', borderTop: 'rgba(0, 0, 0, 0.035)', marginTop: '12px', padding: '1rem 1.7rem 2rem 1rem' }}>
+        <div style={MODAL_STYLES.footer}>
           <CancelButton
             onClick={handleClose}
             disabled={loading}
