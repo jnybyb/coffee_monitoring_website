@@ -1,44 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { FaChartPie } from "react-icons/fa";
-import { MdBarChart } from "react-icons/md";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { statisticsAPI } from '../../../services/api';
 
 const LineGraph = ({ active }) => {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [chartType, setChartType] = useState('bar'); // 'bar' or 'pie'
+  const [timePeriod, setTimePeriod] = useState('monthly'); // 'yearly', 'monthly', 'weekly'
+  const [dataFilter, setDataFilter] = useState('all'); // 'all', 'alive', 'dead', 'seedlings'
+
+  const fetchChartData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await statisticsAPI.getChartData();
+      setChartData(data);
+    } catch (err) {
+      console.error('Error fetching chart data:', err);
+      setError('Failed to load chart data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const initializeChartData = () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Mock chart data - in a real app, this would come from an API
-        const mockData = [
-          { month: 'Jan', beneficiaries: 45, seedlings: 900, aliveCrops: 820, deadCrops: 80 },
-          { month: 'Feb', beneficiaries: 52, seedlings: 1040, aliveCrops: 910, deadCrops: 130 },
-          { month: 'Mar', beneficiaries: 48, seedlings: 960, aliveCrops: 880, deadCrops: 80 },
-          { month: 'Apr', beneficiaries: 61, seedlings: 1220, aliveCrops: 1080, deadCrops: 140 },
-          { month: 'May', beneficiaries: 55, seedlings: 1100, aliveCrops: 990, deadCrops: 110 },
-          { month: 'Jun', beneficiaries: 67, seedlings: 1340, aliveCrops: 1200, deadCrops: 140 },
-          { month: 'Jul', beneficiaries: 72, seedlings: 1440, aliveCrops: 1320, deadCrops: 120 },
-          { month: 'Aug', beneficiaries: 68, seedlings: 1360, aliveCrops: 1220, deadCrops: 140 },
-          { month: 'Sep', beneficiaries: 75, seedlings: 1500, aliveCrops: 1350, deadCrops: 150 }
-        ];
-        
-        setChartData(mockData);
-      } catch (err) {
-        console.error('Error initializing chart data:', err);
-        setError('Failed to load chart data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (active === 'Dashboard') {
-      initializeChartData();
+    if (active === 'Dashboard' || active) {
+      fetchChartData();
     }
   }, [active]);
 
@@ -102,125 +89,136 @@ const LineGraph = ({ active }) => {
           Trend Monitoring
         </h3>
         
-        {/* Chart Type Toggle Buttons */}
-        <div style={{ display: 'flex' }}>
-          <button 
-            onClick={() => setChartType('pie')}
+        {/* Filter Dropdowns */}
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {/* Time Period Filter */}
+          <select
+            value={timePeriod}
+            onChange={(e) => setTimePeriod(e.target.value)}
             style={{
-              padding: '0.5rem',
-              backgroundColor: 'transparent',
-              color: chartType === 'pie' ? 'var(--dark-green)' : 'var(--text-gray)',
-              border: 'none',
+              padding: '0.4rem 0.6rem',
+              fontSize: '0.75rem',
+              color: 'var(--dark-green)',
+              backgroundColor: 'var(--white)',
+              border: '1px solid var(--border-gray)',
               borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '1.4rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s ease'
+              outline: 'none',
+              fontFamily: 'var(--font-main)'
             }}
           >
-            <FaChartPie />
-          </button>
-          <button 
-            onClick={() => setChartType('bar')}
+            <option value="yearly">Yearly</option>
+            <option value="monthly">Monthly</option>
+            <option value="weekly">Weekly</option>
+          </select>
+
+          {/* Data Filter */}
+          <select
+            value={dataFilter}
+            onChange={(e) => setDataFilter(e.target.value)}
             style={{
-              padding: '0.5rem',
-              backgroundColor: 'transparent',
-              color: chartType === 'bar' ? 'var(--dark-green)' : 'var(--text-gray)',
-              border: 'none',
+              padding: '0.4rem 0.6rem',
+              fontSize: '0.75rem',
+              color: 'var(--dark-green)',
+              backgroundColor: 'var(--white)',
+              border: '1px solid var(--border-gray)',
               borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '1.4rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s ease'
+              outline: 'none',
+              fontFamily: 'var(--font-main)'
             }}
           >
-            <MdBarChart />
-          </button>
+            <option value="all">All Data</option>
+            <option value="seedlings">Seedlings Only</option>
+            <option value="alive">Alive Crops Only</option>
+            <option value="dead">Dead Crops Only</option>
+          </select>
         </div>
       </div>
       
       <div style={{ height: '100%', width: '100%', flex: 1 }}>
         <ResponsiveContainer width="100%" height="100%">
-          {chartType === 'bar' ? (
-            <BarChart
-              data={chartData}
-              margin={{
-                top: 10,
-                right: 10,
-                left: -20,
-                bottom: 0,
+          <LineChart
+            data={chartData}
+            margin={{
+              top: 10,
+              right: 10,
+              left: -20,
+              bottom: 0,
+            }}
+          >
+            <defs>
+              <linearGradient id="seedlingGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--chart-gradient-dark)" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="var(--chart-gradient-light)" stopOpacity={0.1}/>
+              </linearGradient>
+              <linearGradient id="aliveGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--success)" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="var(--success)" stopOpacity={0.1}/>
+              </linearGradient>
+              <linearGradient id="deadGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--danger-red)" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="var(--danger-red)" stopOpacity={0.1}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--light-gray)" vertical={false} />
+            <XAxis 
+              dataKey="month" 
+              stroke="var(--text-gray)"
+              fontSize={10}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis 
+              stroke="var(--text-gray)"
+              fontSize={10}
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip 
+              contentStyle={{
+                backgroundColor: 'var(--white)',
+                border: '1px solid var(--border-gray)',
+                borderRadius: '6px',
+                boxShadow: '0 4px 12px var(--shadow-subtle)',
+                fontSize: '0.75rem'
               }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--light-gray)" vertical={false} />
-              <XAxis 
-                dataKey="month" 
-                stroke="var(--text-gray)"
-                fontSize={10}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis 
-                stroke="var(--text-gray)"
-                fontSize={10}
-                tickLine={false}
-                axisLine={false}
-              />
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: 'var(--white)',
-                  border: '1px solid var(--border-gray)',
-                  borderRadius: '6px',
-                  boxShadow: '0 4px 12px var(--shadow-subtle)',
-                  fontSize: '0.75rem'
-                }}
-                cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-              />
-              <Bar 
-                dataKey="beneficiaries" 
-                fill="var(--teal)" 
-                radius={[4, 4, 0, 0]}
-                barSize={12}
-              />
-              <Bar 
+              cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+            />
+            {(dataFilter === 'all' || dataFilter === 'seedlings') && (
+              <Line 
+                type="monotone"
                 dataKey="seedlings" 
-                fill="var(--olive-green)" 
-                radius={[4, 4, 0, 0]}
-                barSize={12}
+                stroke="var(--chart-gradient-dark)" 
+                dot={{ fill: 'var(--chart-gradient-dark)', r: 4 }}
+                activeDot={{ r: 6 }}
+                strokeWidth={2.5}
+                fill="url(#seedlingGradient)"
               />
-            </BarChart>
-          ) : (
-            <PieChart>
-              <Pie
-                data={[
-                  { name: 'Beneficiaries', value: chartData.reduce((sum, item) => sum + item.beneficiaries, 0) },
-                  { name: 'Seedlings', value: chartData.reduce((sum, item) => sum + item.seedlings, 0) / 20 }
-                ]}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={130}
-                fill="var(--teal)"
-                dataKey="value"
-              >
-                <Cell fill="var(--teal)" />
-                <Cell fill="var(--olive-green)" />
-              </Pie>
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: 'var(--white)',
-                  border: '1px solid var(--border-gray)',
-                  borderRadius: '6px',
-                  boxShadow: '0 4px 12px var(--shadow-subtle)',
-                  fontSize: '0.75rem'
-                }}
+            )}
+            {(dataFilter === 'all' || dataFilter === 'alive') && (
+              <Line 
+                type="monotone"
+                dataKey="aliveCrops" 
+                stroke="var(--success)" 
+                dot={{ fill: 'var(--success)', r: 4 }}
+                activeDot={{ r: 6 }}
+                strokeWidth={2.5}
+                fill="url(#aliveGradient)"
               />
-            </PieChart>
-          )}
+            )}
+            {(dataFilter === 'all' || dataFilter === 'dead') && (
+              <Line 
+                type="monotone"
+                dataKey="deadCrops" 
+                stroke="var(--danger-red)" 
+                dot={{ fill: 'var(--danger-red)', r: 4 }}
+                activeDot={{ r: 6 }}
+                strokeWidth={2.5}
+                fill="url(#deadGradient)"
+              />
+            )}
+          </LineChart>
         </ResponsiveContainer>
       </div>
 
@@ -228,28 +226,45 @@ const LineGraph = ({ active }) => {
       <div style={{ 
         display: 'flex', 
         justifyContent: 'center', 
-        gap: '1.5rem'
+        gap: '1.5rem',
+        flexWrap: 'wrap'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.7rem', color: 'var(--dark-text)' }}>
-          <div style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--teal)',
-            marginRight: '0.4rem'
-          }}></div>
-          <span>Beneficiaries</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.7rem', color: 'var(--dark-text)' }}>
-          <div style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--olive-green)',
-            marginRight: '0.4rem'
-          }}></div>
-          <span>Seedlings</span>
-        </div>
+        {(dataFilter === 'all' || dataFilter === 'seedlings') && (
+          <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.7rem', color: 'var(--dark-text)' }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--chart-gradient-dark)',
+              marginRight: '0.4rem'
+            }}></div>
+            <span>Coffee Seedlings</span>
+          </div>
+        )}
+        {(dataFilter === 'all' || dataFilter === 'alive') && (
+          <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.7rem', color: 'var(--dark-text)' }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--success)',
+              marginRight: '0.4rem'
+            }}></div>
+            <span>Alive Crops</span>
+          </div>
+        )}
+        {(dataFilter === 'all' || dataFilter === 'dead') && (
+          <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.7rem', color: 'var(--dark-text)' }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--danger-red)',
+              marginRight: '0.4rem'
+            }}></div>
+            <span>Dead Crops</span>
+          </div>
+        )}
       </div>
     </div>
   );

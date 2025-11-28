@@ -288,12 +288,12 @@ const RecentActivities = ({ active, limit = 10, showViewAll = false }) => {
             e.currentTarget.style.color = 'var(--dark-green)';
           }}
           onClick={() => {
-            // Store flag in sessionStorage to indicate Recents tab should be active
-            sessionStorage.setItem('reportsActiveTab', 'Recents');
+            // Store active tab to display when navigating to Reports
+            sessionStorage.setItem('reportsActiveTab', 'Recent Activities');
             
             // Dispatch custom event to navigate to Reports page
             const event = new CustomEvent('navigateToReports', {
-              detail: { activeTab: 'Recents' }
+              detail: { activeTab: 'Recent Activities' }
             });
             window.dispatchEvent(event);
           }}
