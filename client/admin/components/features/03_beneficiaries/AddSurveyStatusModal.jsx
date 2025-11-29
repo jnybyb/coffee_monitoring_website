@@ -145,7 +145,7 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
     beneficiaryPicture: '',
     aliveCrops: '',
     deadCrops: '',
-    plot: '',
+    plotId: '',
     pictures: []
   });
   const [beneficiaries, setBeneficiaries] = useState([]);
@@ -241,7 +241,7 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
         beneficiaryPicture: record.beneficiaryPicture || '',
         aliveCrops: record.aliveCrops?.toString() || '',
         deadCrops: record.deadCrops?.toString() || '0',
-        plot: record.plot || '',
+        plotId: record.plotId || '',
         pictures: record.pictures || []
       });
       
@@ -270,7 +270,7 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
         beneficiaryPicture: initialBeneficiaryPicture,
         aliveCrops: '',
         deadCrops: '',
-        plot: '',
+        plotId: '',
         pictures: []
       });
       setSelectedFiles([]);
@@ -566,10 +566,10 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
                   Plot ID
                 </label>
                 <select
-                  name="plot"
-                  value={formData.plot || ''}
+                  name="plotId"
+                  value={formData.plotId || ''}
                   onChange={handleInputChange}
-                  style={getSelectStyle(errors.plot, formData.plot)}
+                  style={getSelectStyle(errors.plotId, formData.plotId)}
                   disabled={plotsLoading || !formData.beneficiaryId}
                 >
                   <option value="" style={{ fontSize: '14px' }}>
@@ -581,9 +581,9 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
                     </option>
                   ))}
                 </select>
-                {errors.plot && (
+                {errors.plotId && (
                   <span style={FIELD_STYLES.error}>
-                    {errors.plot}
+                    {errors.plotId}
                   </span>
                 )}
               </div>
@@ -611,7 +611,7 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
                     );
                   })}
                   {selectedFiles.length < 10 && (
-                    <label htmlFor="crop-pictures-input" style={{ cursor: 'pointer', display: 'block', paddingBottom: '100%', position: 'relative', backgroundColor: 'var(--white)', border: '1px dashed var(--gray)', borderRadius: '6px', color: 'var(--placeholder-text)', fontSize: '13px' }}>
+                    <label htmlFor="crop-pictures-input" style={{ cursor: 'pointer', display: 'block', paddingBottom: '100%', position: 'relative', backgroundColor: 'var(--white)', border: '1.5px dashed var(--dark-green)', borderRadius: '6px', color: 'var(--dark-green)', fontSize: '13px' }}>
                       <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>+ Add</span>
                     </label>
                   )}

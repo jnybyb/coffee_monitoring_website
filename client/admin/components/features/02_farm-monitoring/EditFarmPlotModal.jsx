@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { InputField } from '../../ui/FormFields';
+import { CancelButton, SaveButton, AddCoordinateButton } from '../../ui/BeneficiaryButtons';
+import LoadingModal from '../../ui/LoadingModal';
+import AlertModal from '../../ui/AlertModal';
 
 const modalStyle = {
   position: 'fixed',
@@ -11,30 +15,38 @@ const modalStyle = {
   justifyContent: 'center',
   alignItems: 'center',
   zIndex: 1000,
+  pointerEvents: 'auto',
 };
 
 const formStyle = {
-  backgroundColor: 'white',
-  borderRadius: 8,
-  padding: '0 1rem ',
-  maxWidth: '480px',
+  backgroundColor: 'var(--white)',
+  borderRadius: '5px',
+  maxWidth: '450px',
   width: '85%',
   maxHeight: '90vh',
-  overflowY: 'auto',
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
   position: 'relative',
-  scrollbarWidth: 'none',
+  display: 'flex',
+  flexDirection: 'column',
+};
+
+const contentAreaStyle = {
+  overflowY: 'auto',
+  scrollbarWidth: 'thin',
   msOverflowStyle: 'none',
+  padding: '0 0.75rem',
+  flex: 1,
 };
 
 const headerStyle = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  borderBottom: '.5px solid #e9ecef',
-  padding: '1.50rem 1.25rem',
-  background: 'white',
+  borderBottom: '.5px solid var(--border-gray)',
+  padding: '1.4rem 1rem',
+  background: 'var(--white)',
   position: 'sticky',
+  borderRadius: '5px',
   top: 0,
   zIndex: 10,
 };
@@ -43,11 +55,11 @@ const closeBtnStyle = {
   background: 'none',
   border: 'none',
   fontSize: 30,
-  color: '#6c757d',
+  color: 'var(--gray-icon)',
   cursor: 'pointer',
   padding: 0,
-  width: 30,
-  height: 30,
+  width: 28,
+  height: 28,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -56,37 +68,35 @@ const closeBtnStyle = {
 
 const labelStyle = {
   fontWeight: 500,
-  fontSize: 13,
-  marginBottom: 4,
+  fontSize: 11,
+  marginBottom: '0.1rem',
   display: 'block',
 };
 
-const inputStyle = {
-  width: '100%',
-  padding: '10px 12px',
-  borderRadius: 6,
-  border: '1px solid #ccc',
-  fontSize: 12,
-  marginBottom: 0,
-  background: 'white',
-};
-
-// Slightly more compact inputs for coordinate fields
-const coordInputBoxStyle = {
-  ...inputStyle,
-  padding: '6px 10px',
-};
-
 const readOnlyInputStyle = {
-  ...inputStyle,
-  background: '#f5f5f5',
-  color: '#888',
+  width: '100%',
+  padding: '6px 10px',
+  borderRadius: 4,
+  border: '1px solid var(--border-gray)',
+  fontSize: 11,
+  marginBottom: 0,
+  background: 'rgba(0, 0, 0, 0.03)',
+  color: 'var(--dark-text)',
   cursor: 'not-allowed',
+  height: '30px',
+  boxSizing: 'border-box',
 };
 
 const selectStyle = {
-  ...inputStyle,
-  padding: '10px 32px 10px 12px',
+  width: '100%',
+  padding: '6px 32px 6px 10px',
+  borderRadius: 4,
+  border: '1px solid var(--border-gray)',
+  fontSize: 11,
+  marginBottom: 0,
+  background: 'white',
+  height: '30px',
+  boxSizing: 'border-box',
   appearance: 'none',
   WebkitAppearance: 'none',
   MozAppearance: 'none',
@@ -99,110 +109,75 @@ const selectStyle = {
 
 const buttonRowStyle = {
   display: 'flex',
+  gap: '0.75rem',
   justifyContent: 'flex-end',
-  gap: 10,
-  marginTop: 18,
-};
-
-const cancelBtnStyle = {
-  background: '#eee',
-  border: 'none',
-  borderRadius: 6,
-  padding: '10px 24px',
-  color: '#333',
-  fontWeight: 500,
-  cursor: 'pointer',
-  fontSize: 14,
-};
-
-const saveBtnStyle = {
-  background: '#2d7c4a',
-  border: 'none',
-  borderRadius: 6,
-  padding: '8px 16px',
-  color: 'white',
-  fontWeight: 500,
-  cursor: 'pointer',
-  fontSize: 12,
-};
-
-const addButtonStyle = {
-  background: '#e8f5e8',
-  border: '1px solid #2d7c4a',
-  borderRadius: 6,
-  padding: '8px 16px',
-  color: '#2d7c4a',
-  fontWeight: 500,
-  cursor: 'pointer',
-  fontSize: 13,
-  marginTop: 8,
+  paddingTop: '0.75rem',
+  borderTop: '1px solid rgba(0, 0, 0, 0.035)',
 };
 
 const coordinateRowStyle = {
   display: 'flex',
-  gap: 8,
+  gap: 6,
   alignItems: 'flex-start',
-  padding: '8px 12px',
-  backgroundColor: '#f8f9fa',
-  borderRadius: 6,
-  marginBottom: 8,
-  border: '1px solid #e9ecef',
+  padding: '6px 10px',
+  backgroundColor: 'rgba(5, 80, 53, 0.08)',
+  borderRadius: 4,
+  marginBottom: 6,
+  border: '1px solid var(--border-gray)',
+  position: 'relative',
 };
 
 const removeButtonStyle = {
-  background: '#dc3545',
+  background: 'none',
   border: 'none',
   borderRadius: 4,
-  padding: '4px 8px',
-  color: 'white',
+  padding: '3px 6px',
+  color: 'var(--dark-green)',
   cursor: 'pointer',
-  fontSize: 12,
-  fontWeight: 'bold',
-  minWidth: '24px',
-  height: '24px',
+  fontSize: 18,
+  fontWeight: '400',
+  minWidth: '20px',
+  height: '20px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  marginTop: '20px',
+  marginTop: '0px',
+  transition: 'all 0.2s ease',
+  position: 'absolute',
+  top: '6px',
+  right: '10px',
 };
 
 const sectionTitleStyle = {
-  fontSize: 13,
-  fontWeight: 600,
-  color: '#2c5530',
-  marginTop: 16,
+  fontSize: 15,
+  fontWeight: 700,
+  color: 'var(--dark-green)',
+  marginTop: 12,
 };
 
 const pointTitleStyle = {
-  fontSize: 12,
+  fontSize: 10,
   fontWeight: 600,
-  color: '#2c5530',
-  marginBottom: 8,
+  color: 'var(--dark-green)',
+  marginBottom: 2,
 };
 
 const coordinateInputStyle = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 8,
+  gap: 6,
   flex: 1,
 };
 
 const coordinateFieldsStyle = {
   display: 'flex',
-  gap: 8,
+  gap: 6,
   alignItems: 'flex-start',
-};
-
-const plotNameInputStyle = {
-  ...inputStyle,
-  fontSize: 16,
-  fontWeight: 500,
-  color: '#2c5530',
 };
 
 const twoColRowStyle = {
   display: 'flex',
-  gap: 8,
+  gap: 6,
 };
 
 const twoColColStyle = {
@@ -210,10 +185,10 @@ const twoColColStyle = {
 };
 
 const formBodyStyle = {
-  padding: '1.25rem',
+  padding: '1rem',
   display: 'flex',
   flexDirection: 'column',
-  gap: 18,
+  gap: 12,
 };
 
 // Helper function to convert DMS to Decimal Degrees
@@ -291,38 +266,19 @@ const formatSelectedAddress = (beneficiary) => {
   return parts.join(', ');
 };
 
-// Helper function to extract plot number
-const getPlotNumber = (plot, plotIndex) => {
-  // If plotIndex is provided, use it to calculate plot number (index + 1)
-  if (plotIndex !== undefined && plotIndex !== null) {
-    return plotIndex + 1;
-  }
-  
-  // Fallback to existing logic
-  if (plot.plotNumber) {
-    // If plotNumber already contains "Plot #", extract just the number
-    const match = String(plot.plotNumber).match(/Plot\s*#?\s*(\d+)/i);
-    if (match) {
-      return match[1];
-    }
-    // If it's just a number or other format, return as is
-    return plot.plotNumber;
-  }
-  if (plot.id) {
-    return plot.id;
-  }
-  return '1';
-};
-
-function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isLoading = false, plotIndex }) {
+function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries }) {
   const [selectedId, setSelectedId] = useState('');
   const [coordinates, setCoordinates] = useState([
-    { lat: '', lng: '' },
-    { lat: '', lng: '' },
-    { lat: '', lng: '' }
+    { lat: '', lng: '', elevation: '' },
+    { lat: '', lng: '', elevation: '' },
+    { lat: '', lng: '', elevation: '' },
+    { lat: '', lng: '', elevation: '' }
   ]);
   const [errors, setErrors] = useState({});
-  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [initialFormData, setInitialFormData] = useState(null);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Find selected beneficiary object
   const selected = beneficiaries?.find(b => b.beneficiaryId === selectedId || b.id === selectedId) || {};
@@ -330,29 +286,40 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isL
   // Initialize form data when plot changes
   useEffect(() => {
     if (plot && isOpen) {
-      setSelectedId(plot.beneficiaryId || '');
+      const beneficiaryId = plot.beneficiaryId || '';
+      setSelectedId(beneficiaryId);
       
       // Initialize coordinates from existing plot data in DMS format
+      let plotCoordinates;
       if (plot.coordinates && Array.isArray(plot.coordinates)) {
-        const plotCoordinates = plot.coordinates.map(coord => ({
+        plotCoordinates = plot.coordinates.map(coord => ({
           lat: decimalToDMS(coord.lat, true) || '',
-          lng: decimalToDMS(coord.lng, false) || ''
+          lng: decimalToDMS(coord.lng, false) || '',
+          elevation: coord.elevation ? String(coord.elevation) : ''
         }));
         
-        // Ensure minimum 3 coordinates
-        while (plotCoordinates.length < 3) {
-          plotCoordinates.push({ lat: '', lng: '' });
+        // Ensure minimum 4 coordinates
+        while (plotCoordinates.length < 4) {
+          plotCoordinates.push({ lat: '', lng: '', elevation: '' });
         }
         
         setCoordinates(plotCoordinates);
       } else {
-        setCoordinates([
-          { lat: '', lng: '' },
-          { lat: '', lng: '' },
-          { lat: '', lng: '' }
-        ]);
+        plotCoordinates = [
+          { lat: '', lng: '', elevation: '' },
+          { lat: '', lng: '', elevation: '' },
+          { lat: '', lng: '', elevation: '' },
+          { lat: '', lng: '', elevation: '' }
+        ];
+        setCoordinates(plotCoordinates);
       }
       
+      // Store initial form data for change detection
+      setInitialFormData({
+        selectedId: beneficiaryId,
+        coordinates: JSON.parse(JSON.stringify(plotCoordinates))
+      });
+      setHasChanges(false);
       setErrors({});
     }
   }, [plot, isOpen]);
@@ -362,22 +329,29 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isL
     if (!isOpen) {
       setSelectedId('');
       setCoordinates([
-        { lat: '', lng: '' },
-        { lat: '', lng: '' },
-        { lat: '', lng: '' }
+        { lat: '', lng: '', elevation: '' },
+        { lat: '', lng: '', elevation: '' },
+        { lat: '', lng: '', elevation: '' },
+        { lat: '', lng: '', elevation: '' }
       ]);
       setErrors({});
+      setInitialFormData(null);
+      setHasChanges(false);
     }
   }, [isOpen]);
 
   const addCoordinate = () => {
-    setCoordinates([...coordinates, { lat: '', lng: '' }]);
+    const newCoordinates = [...coordinates, { lat: '', lng: '', elevation: '' }];
+    setCoordinates(newCoordinates);
+    checkForChanges(selectedId, newCoordinates);
   };
 
   const removeCoordinate = (index) => {
-    // Only allow removal if we have more than 3 coordinates
-    if (coordinates.length > 3) {
-      setCoordinates(coordinates.filter((_, i) => i !== index));
+    // Only allow removal if we have more than 4 coordinates
+    if (coordinates.length > 4) {
+      const newCoordinates = coordinates.filter((_, i) => i !== index);
+      setCoordinates(newCoordinates);
+      checkForChanges(selectedId, newCoordinates);
     }
   };
 
@@ -385,6 +359,25 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isL
     const updated = [...coordinates];
     updated[index][field] = value;
     setCoordinates(updated);
+    checkForChanges(selectedId, updated);
+  };
+
+  // Helper function to check for changes
+  const checkForChanges = (currentSelectedId, currentCoordinates) => {
+    if (!initialFormData) {
+      setHasChanges(false);
+      return;
+    }
+
+    // Check if beneficiary changed
+    if (currentSelectedId !== initialFormData.selectedId) {
+      setHasChanges(true);
+      return;
+    }
+
+    // Check if coordinates changed
+    const coordsChanged = JSON.stringify(currentCoordinates) !== JSON.stringify(initialFormData.coordinates);
+    setHasChanges(coordsChanged);
   };
 
   const validateAndConvertCoordinates = (coordinates) => {
@@ -424,7 +417,10 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isL
         throw new Error(`Invalid longitude value at point ${i + 1} (must be between -180 and 180)`);
       }
       
-      validCoordinates.push({ lat, lng });
+      // Parse elevation (optional)
+      const elevation = coord.elevation ? parseInt(coord.elevation, 10) : null;
+      
+      validCoordinates.push({ lat, lng, elevation });
     }
     
     return validCoordinates;
@@ -433,7 +429,7 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isL
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (isLoading) return; // Prevent submission while loading
+    if (isSubmitting) return;
     
     const newErrors = {};
     
@@ -443,184 +439,258 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries, isL
     
     // Validate coordinates
     const validCoordinates = coordinates.filter(coord => coord.lat && coord.lng);
-    if (validCoordinates.length < 3) {
-      newErrors.coordinates = 'At least 3 coordinate points are required to define a plot boundary';
+    if (validCoordinates.length < 4) {
+      newErrors.coordinates = 'At least 4 coordinate points are required to define a plot boundary';
     }
     
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
+    setIsSubmitting(true);
+    
     try {
+      const startTime = Date.now();
+      
       // Convert and validate all coordinates
       const convertedCoordinates = validateAndConvertCoordinates(validCoordinates);
       
-      // Close modal immediately and let parent handle loading/success
-      onClose();
-      
-      // Call the onSubmit function (parent will handle loading and success)
+      // Call the onSubmit function
       await onSubmit({
-        id: plot.id, // Keep the original plot ID
-        plotNumber: plot.plotNumber, // Keep the existing plot number
+        id: plot.id,
+        plotNumber: plot.plotNumber,
         beneficiaryId: selected.beneficiaryId || selected.id,
         fullName: selected.fullName || selected.name,
         address: selected.address,
         coordinates: convertedCoordinates,
-        color: plot.color, // Keep the original color
+        color: plot.color,
       });
       
+      // Calculate elapsed time and ensure minimum display of 1 second for loading modal
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(1000 - elapsedTime, 0);
+      
+      // Wait for remaining time to ensure loading modal shows for at least 1 second
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
+      
+      // Close loading modal and wait a bit
+      setIsSubmitting(false);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Show success modal
+      setShowSuccessModal(true);
     } catch (error) {
-      // If there's an error, show it in the modal
+      setIsSubmitting(false);
       newErrors.coordinates = error.message || 'Failed to update farm plot';
       setErrors(newErrors);
     }
   };
 
+  const handleClose = () => {
+    if (!isSubmitting && !showSuccessModal) {
+      setErrors({});
+      onClose();
+    }
+  };
+  
+  const handleSuccessClose = () => {
+    setShowSuccessModal(false);
+    setErrors({});
+    onClose();
+  };
+
   if (!isOpen || !plot) return null;
 
   return (
+    <>
+    {isOpen && !showSuccessModal && (
     <div style={modalStyle}>
       <form style={formStyle} onSubmit={handleSubmit} className="hide-scrollbar-modal">
-        {/* Modal Header */}
-        <div style={headerStyle}>
-          <h2 style={{ color: 'var(--black)', margin: 0, fontSize: '1.4rem', fontWeight: 600 }}>Edit Farm Plot #{getPlotNumber(plot, plotIndex)}</h2>
+          {/* Modal Header - stays fixed above scrollable content */}
+          <div style={headerStyle}>
+          <h2 style={{ color: 'var(--dark-green)', margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>
+            Edit Plot: {plot.plotId || plot.id || 'N/A'}
+          </h2>
           <button
             type="button"
-            onClick={onClose}
-            style={closeBtnStyle}
+            onClick={handleClose}
+            disabled={isSubmitting}
+            style={{
+              ...closeBtnStyle,
+              cursor: isSubmitting ? 'not-allowed' : 'pointer'
+            }}
             aria-label="Close"
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+            onMouseEnter={(e) => !isSubmitting && (e.target.style.backgroundColor = 'var(--border-gray)')}
+            onMouseLeave={(e) => !isSubmitting && (e.target.style.backgroundColor = 'transparent')}
           >
             ×
           </button>
         </div>
 
-        <div style={formBodyStyle}>
-          {/* Beneficiary Selection and ID in one row */}
-          <div style={twoColRowStyle}>
-            <div style={twoColColStyle}>
-              <label style={labelStyle}>Beneficiary Full Name</label>
-              <select
-                style={selectStyle}
-                value={selectedId}
-                onChange={e => setSelectedId(e.target.value)}
-                required
-              >
-                <option value="">Select beneficiary</option>
-                {beneficiaries?.map(b => (
-                  <option key={b.beneficiaryId || b.id} value={b.beneficiaryId || b.id}>
-                    {b.fullName || b.name || `${b.firstName || ''} ${b.middleName || ''} ${b.lastName || ''}`.trim()}
-                  </option>
-                ))}
-              </select>
-              {errors.selectedId && <div style={{ color: '#c00', fontSize: 12 }}>{errors.selectedId}</div>}
+        {/* Scrollable content area */}
+        <div style={contentAreaStyle}>
+          <div style={formBodyStyle}>
+            {/* Beneficiary Selection and ID in one row */}
+            <div style={twoColRowStyle}>
+              <div style={twoColColStyle}>
+                <label style={labelStyle}>Beneficiary Full Name</label>
+                <select
+                  style={selectStyle}
+                  value={selectedId}
+                  onChange={e => {
+                    const newId = e.target.value;
+                    setSelectedId(newId);
+                    checkForChanges(newId, coordinates);
+                  }}
+                  required
+                >
+                  <option value="">Select beneficiary</option>
+                  {beneficiaries?.map(b => (
+                    <option key={b.beneficiaryId || b.id} value={b.beneficiaryId || b.id}>
+                      {b.fullName || b.name || `${b.firstName || ''} ${b.middleName || ''} ${b.lastName || ''}`.trim()}
+                    </option>
+                  ))}
+                </select>
+                {errors.selectedId && <div style={{ color: 'var(--red-error)', fontSize: 10, marginTop: 6 }}>{errors.selectedId}</div>}
+              </div>
+              <div style={twoColColStyle}>
+                <label style={labelStyle}>Beneficiary ID</label>
+                <input
+                  style={readOnlyInputStyle}
+                  value={selected.beneficiaryId || selected.id || ''}
+                  readOnly
+                  tabIndex={-1}
+                />
+              </div>
             </div>
-            <div style={twoColColStyle}>
-              <label style={labelStyle}>Beneficiary ID</label>
+
+            {/* Address (Read-only) */}
+            <div>
+              <label style={labelStyle}>Address</label>
               <input
                 style={readOnlyInputStyle}
-                value={selected.beneficiaryId || selected.id || ''}
+                value={formatSelectedAddress(selected)}
                 readOnly
                 tabIndex={-1}
               />
             </div>
-          </div>
 
-          {/* Address (Read-only) */}
-          <div>
-            <label style={labelStyle}>Address</label>
-            <input
-              style={readOnlyInputStyle}
-              value={formatSelectedAddress(selected)}
-              readOnly
-              tabIndex={-1}
-            />
-          </div>
-
-          {/* Plot Boundary Coordinates */}
-          <div>
-            <div style={sectionTitleStyle}>Plot Boundary Coordinates</div>
-            <p style={{ fontSize: 10, color: '#666', marginBottom: 15 }}>
-              Edit coordinate points to define the plot boundary. Minimum 3 points required.
-            </p>
-            {coordinates.map((coord, index) => (
-              <div key={index} style={coordinateRowStyle}>
-                <div style={coordinateInputStyle}>
-                  <div style={pointTitleStyle}>Point {index + 1}</div>
-                  <div style={coordinateFieldsStyle}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ ...labelStyle, fontSize: 11 }}>Latitude</label>
-                      <input
-                        style={coordInputBoxStyle}
-                        type="text"
-                        value={coord.lat}
-                        onChange={e => updateCoordinate(index, 'lat', e.target.value)}
-                        placeholder="7°15'20.4&quot;N"
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ ...labelStyle, fontSize: 11 }}>Longitude</label>
-                      <input
-                        style={coordInputBoxStyle}
-                        type="text"
-                        value={coord.lng}
-                        onChange={e => updateCoordinate(index, 'lng', e.target.value)}
-                        placeholder="126°20'36.5&quot;E"
-                      />
+            {/* Plot Boundary Coordinates */}
+            <div>
+              <div style={sectionTitleStyle}>Plot Boundary Coordinates</div>
+              <p style={{ fontSize: 8.5, color: 'var(--dark-text)', marginBottom: 10 }}>
+                Edit coordinate points to define the plot boundary. Minimum 4 points required.
+              </p>
+              {coordinates.map((coord, index) => (
+                <div key={index} style={coordinateRowStyle}>
+                  <div style={coordinateInputStyle}>
+                    <div style={pointTitleStyle}>Point {index + 1}</div>
+                    <div style={coordinateFieldsStyle}>
+                      <div style={{ flex: 1 }}>
+                        <InputField
+                          name={`lat-${index}`}
+                          label="Latitude"
+                          value={coord.lat}
+                          onChange={e => updateCoordinate(index, 'lat', e.target.value)}
+                          placeholder=" "
+                          labelFontSize="9px"
+                          labelMarginBottom="2px"
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <InputField
+                          name={`lng-${index}`}
+                          label="Longitude"
+                          value={coord.lng}
+                          onChange={e => updateCoordinate(index, 'lng', e.target.value)}
+                          placeholder=" "
+                          labelFontSize="9px"
+                          labelMarginBottom="2px"
+                        />
+                      </div>
+                      <div style={{ flex: 0.7 }}>
+                        <InputField
+                          name={`elevation-${index}`}
+                          label="Elevation (m)"
+                          type="number"
+                          value={coord.elevation}
+                          onChange={e => updateCoordinate(index, 'elevation', e.target.value)}
+                          placeholder=" "
+                          labelFontSize="9px"
+                          labelMarginBottom="2px"
+                        />
+                      </div>
                     </div>
                   </div>
+                  {coordinates.length > 4 && (
+                    <button
+                      type="button"
+                      style={removeButtonStyle}
+                      onClick={() => removeCoordinate(index)}
+                      title="Remove coordinate"
+                      onMouseEnter={(e) => {
+                        e.target.style.color = 'var(--danger-red)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.color = 'var(--dark-green)';
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
-                {coordinates.length > 3 && (
-                  <button
-                    type="button"
-                    style={removeButtonStyle}
-                    onClick={() => removeCoordinate(index)}
-                    title="Remove coordinate"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-            <button type="button" style={addButtonStyle} onClick={addCoordinate}>
-              + Add Coordinate Point
-            </button>
-            {errors.coordinates && <div style={{ color: '#c00', fontSize: 12, marginTop: 8 }}>{errors.coordinates}</div>}
-          </div>
+              ))}
+              <AddCoordinateButton onClick={addCoordinate}>
+                + Add Coordinate Point
+              </AddCoordinateButton>
+              {errors.coordinates && <div style={{ color: 'var(--red-error)', fontSize: 10, marginTop: 6 }}>{errors.coordinates}</div>}
+            </div>
 
-          {/* Action Buttons */}
-          <div style={{ ...buttonRowStyle, paddingTop: '1rem', borderTop: '1px solid #e9ecef' }}>
-            <button type="button" style={cancelBtnStyle} onClick={onClose} disabled={isLoading}>
-              Cancel
-            </button>
-            <button
-              type="submit"
-              style={{
-                ...saveBtnStyle,
-                opacity: isLoading ? 0.6 : 1,
-                cursor: isLoading ? 'not-allowed' : 'pointer'
-              }}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Updating...' : 'Update Plot'}
-            </button>
+            {/* Action Buttons */}
+            <div style={{ ...buttonRowStyle, padding: '1rem 0 1rem 1rem' }}>
+              <CancelButton
+                onClick={handleClose}
+                disabled={isSubmitting}
+                fontSize="11px"
+                padding="10px 18px"
+                borderRadius="5px"
+              >
+                Cancel
+              </CancelButton>
+              <SaveButton
+                type="submit"
+                disabled={isSubmitting || !hasChanges}
+                fontSize="11px"
+                padding="10px 18px"
+                borderRadius="5px"
+              >
+                Update Plot
+              </SaveButton>
+            </div>
           </div>
         </div>
       </form>
     </div>
+    )}
+    <LoadingModal 
+      isOpen={isSubmitting}
+      title="Updating..."
+      message="Updating farm plot"
+    />
+    <AlertModal 
+      isOpen={showSuccessModal}
+      onClose={handleSuccessClose}
+      type="success"
+      title="Success!"
+      message="Farm plot has been updated successfully."
+      autoClose={true}
+      autoCloseDelay={1500}
+      buttonBorderRadius={4}
+      hideButton={true}
+    />
+    </>
   );
 }
 
 export default EditFarmPlotModal;
-
-<style>
-{`
-.hide-scrollbar-modal::-webkit-scrollbar {
-  display: none;
-}
-.hide-scrollbar-modal {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
-}
-`}
-</style>

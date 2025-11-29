@@ -136,7 +136,7 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
     beneficiaryPicture: '',
     aliveCrops: '',
     deadCrops: '',
-    plot: '',
+    plotId: '',
     pictures: []
   });
   const [errors, setErrors] = useState({});
@@ -204,7 +204,7 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
         beneficiaryPicture: record.beneficiaryPicture || '',
         aliveCrops: record.aliveCrops?.toString() || '',
         deadCrops: record.deadCrops?.toString() || '0',
-        plot: record.plot || '',
+        plotId: record.plotId || '',
         pictures: record.pictures || []
       };
       
@@ -465,10 +465,10 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
                   Plot ID
                 </label>
                 <select
-                  name="plot"
-                  value={formData.plot || ''}
+                  name="plotId"
+                  value={formData.plotId || ''}
                   onChange={handleInputChange}
-                  style={getSelectStyle(errors.plot, formData.plot)}
+                  style={getSelectStyle(errors.plotId, formData.plotId)}
                   disabled={plotsLoading || !formData.beneficiaryId}
                 >
                   <option value="" style={{ fontSize: '14px' }}>
@@ -480,9 +480,9 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
                     </option>
                   ))}
                 </select>
-                {errors.plot && (
+                {errors.plotId && (
                   <span style={FIELD_STYLES.error}>
-                    {errors.plot}
+                    {errors.plotId}
                   </span>
                 )}
               </div>

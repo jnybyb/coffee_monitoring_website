@@ -1,19 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { IoIosSearch } from "react-icons/io";
+import { IoCloseCircle } from "react-icons/io5";
 import { GrMapLocation } from "react-icons/gr";
 import { FaUsersLine } from "react-icons/fa6";
 import NoDataDisplay from '../../ui/NoDataDisplay';
+import ViewFarmPlotModal from './ViewFarmPlotModal';
 
-const MapDetails = () => {
+const MapDetails = ({ beneficiaries = [], farmPlots = [], onViewAll, onEditPlot, onDeleteSuccess = null }) => {
   const [activeTab, setActiveTab] = useState('beneficiaries'); // Track active tab
   const [searchTerm, setSearchTerm] = useState(''); // Track search input
+  const [selectedPlot, setSelectedPlot] = useState(null);
+  const [selectedPlotIndex, setSelectedPlotIndex] = useState(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
   
-  // Empty beneficiaries data (would come from API in a real implementation)
-  const sampleBeneficiaries = [];
+  // Filter beneficiaries to only include those with farm plots
+  const beneficiariesWithPlots = beneficiaries.filter(beneficiary => 
+    farmPlots.some(plot => plot.beneficiaryId === (beneficiary.beneficiaryId || beneficiary.id))
+  );
   
-  // Empty farms data
-  const sampleFarms = [];
+  // Filter beneficiaries based on search term and those with plots
+  const filteredBeneficiaries = beneficiariesWithPlots.filter(beneficiary =>
+    (beneficiary.fullName || beneficiary.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (beneficiary.beneficiaryId || beneficiary.id || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
   
+  // Filter farms to only include those currently plotted (all farm plots passed in)
+  const filteredFarms = farmPlots.filter(farm =>
+    (farm.plotNumber || farm.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (farm.plotId || farm.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (farm.beneficiaryName || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   // Function to render default profile icon when picture is not available
   const renderProfileIcon = () => (
     <div style={{
@@ -24,28 +42,61 @@ const MapDetails = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      color: '#666',
+      color: 'var(--dark-text)',
       fontSize: '16px',
       fontWeight: 'bold'
     }}>
       📷
     </div>
   );
-  
-  // Filter beneficiaries based on search term
-  const filteredBeneficiaries = sampleBeneficiaries.filter(beneficiary =>
-    beneficiary.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    beneficiary.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
-  // Filter farms based on search term
-  const filteredFarms = sampleFarms.filter(farm =>
-    farm.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    farm.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    farm.beneficiary.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
 
+  // Handle farm plot click
+  const handlePlotClick = (plot, index) => {
+    setSelectedPlot(plot);
+    setSelectedPlotIndex(index);
+    setIsViewModalOpen(true);
+  };
+
+  // Handle beneficiary click - open modal with first plot of the beneficiary
+  const handleBeneficiaryClick = (beneficiary) => {
+    const beneficiaryPlots = farmPlots.filter(
+      plot => plot.beneficiaryId === (beneficiary.beneficiaryId || beneficiary.id)
+    );
+    
+    if (beneficiaryPlots.length > 0) {
+      const firstPlot = beneficiaryPlots[0];
+      const plotIndex = farmPlots.findIndex(p => p.id === firstPlot.id);
+      setSelectedPlot(firstPlot);
+      setSelectedPlotIndex(plotIndex);
+      setIsViewModalOpen(true);
+    }
+  };
+
+  // Handle close modal
+  const handleCloseModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedPlot(null);
+    setSelectedPlotIndex(null);
+  };
+
+  // Handle edit plot
+  const handleEditPlot = async (updatedPlotData, index) => {
+    try {
+      if (onEditPlot) {
+        await onEditPlot(updatedPlotData);
+      }
+    } catch (error) {
+      console.error('Error editing plot:', error);
+      // Error is already handled by the modal
+    }
+  };
+
+  // Handle delete plot (placeholder - can be customized)
+  const handleDeletePlot = (plot, index) => {
+    console.log('Delete plot:', plot, index);
+    // Add delete functionality here if needed
+  };
+  
   return (
     <div style={{
       position: 'relative',
@@ -59,11 +110,38 @@ const MapDetails = () => {
       {/* Title */}
       <div style={{
         padding: '1.5rem 1.25rem 0.5rem 1.25rem',
-        fontSize: '1.1rem',
-        fontWeight: 600,
-        color: 'var(--dark-green)'
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
       }}>
-        Farm Plots
+        <div style={{
+          fontSize: '1.1rem',
+          fontWeight: 600,
+          color: 'var(--dark-green)'
+        }}>
+          Farm Plots
+        </div>
+        <button
+          onClick={onViewAll}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--dark-green)',
+            fontSize: '0.65rem',
+            fontWeight: 500,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+            padding: 0
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '0.7';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '1';
+          }}
+        >
+          View All
+        </button>
       </div>
 
       {/* Search Bar */}
@@ -72,33 +150,50 @@ const MapDetails = () => {
         flexShrink: 0
       }}>
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          border: '1px solid var(--border-gray)',
-          borderRadius: '4px',
+          position: 'relative',
           width: '100%'
         }}>
-          <div style={{
-            color: 'var(--text-gray)',
-            padding: '0.4rem',
-            fontSize: '0.82rem' 
-          }}>
-            <IoIosSearch />
-          </div>
+          <IoIosSearch 
+            size={16} 
+            style={{
+              position: 'absolute',
+              left: '10px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#6c757d',
+              pointerEvents: 'none'
+            }}
+          />
           <input
             type="text"
             placeholder={activeTab === 'beneficiaries' ? "Search beneficiaries..." : "Search farms..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
-              flex: 1,
-              padding: '0.5rem 0',
-              border: 'none',
-              outline: 'none',
+              width: '100%',
+              padding: '0.5rem 2.5rem 0.5rem 2rem',
+              border: '1px solid var(--border-gray)',
+              borderRadius: '4px',
               fontSize: '0.65rem',
-              backgroundColor: 'transparent'
+              outline: 'none'
             }}
           />
+          {searchTerm && (
+            <IoCloseCircle
+              size={16}
+              onClick={() => setSearchTerm('')}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--text-gray)',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--dark-green)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-gray)'}
+            />
+          )}
         </div>
       </div>
       
@@ -190,17 +285,33 @@ const MapDetails = () => {
                 gap: '0.5rem'
               }}>
                 {filteredBeneficiaries.map((beneficiary, index) => (
-                  <div key={index} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.6rem',
-                    border: '1px solid var(--light-border)',
-                    borderRadius: '6px',
-                    backgroundColor: 'var(--white)',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-                    width: '100%'
-                  }}>
+                  <div 
+                    key={beneficiary.beneficiaryId || beneficiary.id || index} 
+                    onClick={() => handleBeneficiaryClick(beneficiary)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.6rem',
+                      border: '1px solid var(--border-gray)',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--white)',
+                      boxShadow: '0 1px 3px var(--shadow-subtle)',
+                      width: '100%',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f8f9fa';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--white)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 1px 3px var(--shadow-subtle)';
+                    }}
+                  >
                     {/* Left side - Profile Picture, Name, and Beneficiary ID */}
                     <div style={{ 
                       display: 'flex',
@@ -213,7 +324,7 @@ const MapDetails = () => {
                         {beneficiary.picture ? (
                           <img 
                             src={beneficiary.picture} 
-                            alt={beneficiary.name}
+                            alt={beneficiary.fullName || beneficiary.name}
                             style={{
                               width: '40px',
                               height: '40px',
@@ -225,7 +336,7 @@ const MapDetails = () => {
                           renderProfileIcon()
                         )}
                       </div>
-                      
+                    
                       {/* Beneficiary Info */}
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{
@@ -237,17 +348,17 @@ const MapDetails = () => {
                           overflow: 'hidden',
                           textOverflow: 'ellipsis'
                         }}>
-                          {beneficiary.name}
+                          {beneficiary.fullName || beneficiary.name || `${beneficiary.firstName || ''} ${beneficiary.middleName || ''} ${beneficiary.lastName || ''}`.trim()}
                         </div>
                         <div style={{
                           fontSize: '0.6rem',
                           color: 'var(--text-gray)'
                         }}>
-                          ID: {beneficiary.id}
+                          ID: {beneficiary.beneficiaryId || beneficiary.id}
                         </div>
                       </div>
                     </div>
-                    
+                  
                     {/* Right side - Farm Plots and Counter */}
                     <div style={{
                       display: 'flex',
@@ -261,13 +372,14 @@ const MapDetails = () => {
                         color: 'var(--text-gray)',
                         textAlign: 'right'
                       }}>
-                        <div>Plots</div>
+                        <div>Farms</div>
                         <div style={{
                           fontWeight: 500,
                           fontSize: '0.85rem',
                           color: 'var(--dark-green)'
                         }}>
-                          {beneficiary.farmPlots}
+                          {/* Count farm plots for this beneficiary */}
+                          {farmPlots.filter(plot => plot.beneficiaryId === (beneficiary.beneficiaryId || beneficiary.id)).length}
                         </div>
                       </div>
                     </div>
@@ -294,67 +406,94 @@ const MapDetails = () => {
                 gap: '0.5rem'
               }}>
                 {filteredFarms.map((farm, index) => (
-                  <div key={index} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.6rem',
-                    border: '1px solid var(--light-border)',
-                    borderRadius: '6px',
-                    backgroundColor: 'var(--white)',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-                    width: '100%'
-                  }}>
-                    {/* Farm Info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontWeight: 600,
-                        fontSize: '0.7rem',
-                        color: 'var(--dark-gray)',
-                        marginBottom: '0.2rem',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}>
-                        {farm.name}
-                      </div>
-                      <div style={{
-                        fontSize: '0.6rem',
-                        color: 'var(--text-gray)',
-                        marginBottom: '0.2rem'
-                      }}>
-                        ID: {farm.id}
-                      </div>
-                      <div style={{
-                        fontSize: '0.6rem',
-                        color: 'var(--text-gray)',
-                        marginBottom: '0.2rem',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}>
-                        Beneficiary: {farm.beneficiary}
-                      </div>
-                      <div style={{
-                        fontSize: '0.6rem',
-                        color: 'var(--text-gray)'
-                      }}>
-                        Area: {farm.area}
-                      </div>
-                    </div>
-                    
-                    {/* Right side - Status */}
-                    <div style={{
-                      flexShrink: 0,
-                      marginLeft: '1rem',
-                      textAlign: 'right'
+                  <div 
+                    key={farm.id || index} 
+                    onClick={() => handlePlotClick(farm, index)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.6rem',
+                      border: '1px solid var(--border-gray)',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--white)',
+                      boxShadow: '0 1px 3px var(--shadow-subtle)',
+                      width: '100%',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f8f9fa';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--white)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 1px 3px var(--shadow-subtle)';
+                    }}
+                  >
+                    {/* Left side - Profile Picture and Farm Info */}
+                    <div style={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      flex: 1,
+                      minWidth: 0
                     }}>
-                      <div style={{
-                        fontSize: '0.6rem',
-                        fontWeight: 500,
-                        color: farm.status === 'Active' ? 'green' : farm.status === 'Inactive' ? 'red' : 'orange'
-                      }}>
-                        {farm.status}
+                      {/* Profile Picture or Icon */}
+                      <div style={{ marginRight: '0.6rem', flexShrink: 0 }}>
+                        {farm.beneficiaryPicture ? (
+                          <img 
+                            src={`http://localhost:5000${farm.beneficiaryPicture}`}
+                            alt={farm.beneficiaryName}
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '50%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        ) : (
+                          renderProfileIcon()
+                        )}
+                      </div>
+                    
+                      {/* Farm Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontWeight: 600,
+                          fontSize: '0.7rem',
+                          color: 'var(--dark-gray)',
+                          marginBottom: '0.2rem',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {farm.plotId || farm.id}
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.5rem'
+                        }}>
+                          <div style={{
+                            fontSize: '0.6rem',
+                            color: 'var(--text-gray)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {farm.beneficiaryName}
+                          </div>
+                          <div style={{
+                            fontSize: '0.6rem',
+                            color: 'var(--text-gray)',
+                            flexShrink: 0
+                          }}>
+                            {farm.beneficiaryId}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -364,6 +503,19 @@ const MapDetails = () => {
           </div>
         )}
       </div>
+
+      {/* View Farm Plot Modal */}
+      <ViewFarmPlotModal
+        isOpen={isViewModalOpen}
+        onClose={handleCloseModal}
+        plot={selectedPlot}
+        plotIndex={selectedPlotIndex}
+        otherPlots={farmPlots}
+        beneficiaries={beneficiaries}
+        onEdit={handleEditPlot}
+        onDelete={handleDeletePlot}
+        onDeleteSuccess={onDeleteSuccess}
+      />
     </div>
   );
 };

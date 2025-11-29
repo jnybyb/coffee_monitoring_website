@@ -13,16 +13,15 @@ import AddFarmPlotModal from '../../features/02_farm-monitoring/AddFarmPlotModal
 import AddSeedlingRecordModal from './AddSeedlingRecordModal';
 import EditSeedlingRecordModal from './EditSeedlingRecordModal';
 import EditBeneficiaryModal from './EditBeneficiaryModal';
-import AddSurveyStatusModal from './crop-status/AddSurveyStatusModal';
-import EditCropStatusModal from './crop-status/EditCropStatusModal';
-import DeleteCropStatusModal from './crop-status/DeleteCropStatusModal';
+import AddSurveyStatusModal from './AddSurveyStatusModal';
+import EditCropStatusModal from './EditSurveyStatusModal';
 import AlertModal from '../../ui/AlertModal';
 import LoadingModal from '../../ui/LoadingModal';
 import { beneficiariesAPI, seedlingsAPI, cropStatusAPI, farmPlotsAPI } from '../../../services/api';
 
 const InfoRow = ({ label, value }) => (
   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.6rem' }}>
-    <div style={{ color: 'var(--dark-gray)', fontSize: '0.7rem', fontWeight: 600, minWidth: '100px' }}>
+    <div style={{ color: 'var(--dark-gray)', fontSize: '0.7rem', fontWeight: 700, minWidth: '100px' }}>
       {label}:
     </div>
     <div style={{ color: 'var(--dark-green)', fontSize: '0.7rem', fontWeight: 500, flex: 1 }}>{value || '-'}</div>
@@ -341,6 +340,9 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
   // Handle edit crop status record
   const handleEditCropStatusClick = (record, e) => {
     e.stopPropagation();
+    // Close any success modals before opening edit modal
+    setShowCropStatusUpdateSuccess(false);
+    setShowAddCropStatusSuccess(false);
     setSelectedCropStatusRecord(record);
     setShowEditCropStatus(true);
   };
@@ -386,15 +388,23 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
     await fetchCropStatusRecords(currentBeneficiary.beneficiaryId);
     setShowEditCropStatus(false);
     setSelectedCropStatusRecord(null);
-    // Show success modal
+    // Show success modal (it will auto-close after delay)
     setShowCropStatusUpdateSuccess(true);
+    // Auto-hide success modal after delay
+    setTimeout(() => {
+      setShowCropStatusUpdateSuccess(false);
+    }, 1500);
   };
   
   // Handle crop status record added
   const handleCropStatusAdded = async () => {
     await fetchCropStatusRecords(currentBeneficiary.beneficiaryId);
-    // Show success modal
+    // Show success modal (it will auto-close after delay)
     setShowAddCropStatusSuccess(true);
+    // Auto-hide success modal after delay
+    setTimeout(() => {
+      setShowAddCropStatusSuccess(false);
+    }, 1500);
   };
 
   // Handle edit beneficiary
@@ -621,37 +631,15 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
+                gap: '0.4rem',
+                color: '#2c5530',
+                fontWeight: '600',
+                fontSize: '0.8rem',
                 marginBottom: '0.6rem',
               }}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  color: '#2c5530',
-                  fontWeight: '600',
-                  fontSize: '0.8rem',
-                }}
-              >
-                <LuLandPlot size={14} />
-                <span>Farm Plots</span>
-              </div>
-              <div
-                onClick={() => {
-                  navigate('/farm-monitoring');
-                }}
-                style={{
-                  color: 'var(--dark-green)',
-                  fontSize: '0.65rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                }}
-              >
-                <span>View Farm</span>
-              </div>
+              <LuLandPlot size={14} />
+              <span>Farm Plots</span>
             </div>
             {loadingFarmPlots ? (
               <div
@@ -683,28 +671,63 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
                   style={{
                     display: 'flex',
                     flexWrap: 'wrap',
-                    gap: '0.5rem',
+                    gap: '1rem',
                     padding: '0.5rem',
                   }}
                 >
                   {farmPlots.map((plot, index) => (
                     <div
                       key={plot.id || index}
+                      onClick={() => {
+                        // Store the selected plot data in sessionStorage
+                        sessionStorage.setItem('selectedPlotId', plot.id || plot.plotId);
+                        // Navigate to farm monitoring page
+                        navigate('/farm-monitoring', { state: { selectedPlot: plot } });
+                      }}
                       style={{
-                        backgroundColor: '#f8fdf8',
-                        border: '1px solid #e8f5e8',
-                        borderRadius: '4px',
-                        padding: '0.4rem 0.6rem',
-                        fontSize: '0.65rem',
-                        fontWeight: '600',
-                        color: '#2c5530',
-                        display: 'inline-flex',
+                        display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
-                        gap: '0.3rem',
+                        gap: '0.4rem',
+                        cursor: 'pointer',
                       }}
                     >
-                      <LuLandPlot size={12} />
-                      <span>{plot.plotId || plot.id || `Plot ${index + 1}`}</span>
+                      <div
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          backgroundColor: '#f8fdf8',
+                          border: '2px solid #e8f5e8',
+                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#2c5530',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#e8f5e8';
+                          e.currentTarget.style.border = '2px solid #2c5530';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f8fdf8';
+                          e.currentTarget.style.border = '2px solid #e8f5e8';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                      >
+                        <LuLandPlot size={32} />
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '0.65rem',
+                          fontWeight: '600',
+                          color: '#2c5530',
+                          textAlign: 'center',
+                        }}
+                      >
+                        {plot.plotId || plot.id || `Plot ${index + 1}`}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -781,7 +804,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
                 <p style={{ marginBottom: '0' }}>No seedling records available</p>
               </div>
             ) : (
-              <div style={{ marginLeft: '0.8rem' }}>
+              <div style={{ marginLeft: '1.5rem', marginRight: '1rem' }}>
                 {seedlingRecords.map((record, index) => (
                   <div
                     key={record.id || index}
@@ -799,7 +822,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
                         justifyContent: 'space-between', 
                         alignItems: 'center',
                         cursor: 'pointer',
-                        marginBottom: expandedRecords[index] ? '0.6rem' : '0'
+                        marginBottom: '0.4rem'
                       }}
                       onClick={() => toggleRecordExpansion(index)}
                     >
@@ -814,6 +837,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
                         )}
                       </div>
                     </div>
+                    <div style={{ height: '1px', backgroundColor: '#e8f5e8', marginBottom: expandedRecords[index] ? '0.6rem' : '0' }} />
                     {expandedRecords[index] && (
                       <>
                         <div style={{ fontSize: '0.4rem', color: '#495057', lineHeight: '1', marginLeft: '1rem', marginBottom: '0.6rem' }}>
@@ -895,7 +919,12 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
                 <span>Crop Survey Status</span>
               </div>
               <button
-                onClick={() => setShowAddCropStatus(true)}
+                onClick={() => {
+                  // Close any success modals before opening add modal
+                  setShowCropStatusUpdateSuccess(false);
+                  setShowAddCropStatusSuccess(false);
+                  setShowAddCropStatus(true);
+                }}
                 style={{
                   padding: '0.35rem 0.5rem',
                   backgroundColor: 'var(--dark-green)',
@@ -939,7 +968,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
                 <p style={{ marginBottom: '0' }}>No crop survey data available</p>
               </div>
             ) : (
-              <div style={{ marginLeft: '0.8rem' }}>
+              <div style={{ marginLeft: '1rem', marginRight: '0.8rem' }}>
                 {cropStatusRecords.map((record, index) => (
                   <div
                     key={record.id || index}
@@ -957,7 +986,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
                         justifyContent: 'space-between', 
                         alignItems: 'center',
                         cursor: 'pointer',
-                        marginBottom: expandedCropStatus[index] ? '0.6rem' : '0'
+                        marginBottom: '0.4rem'
                       }}
                       onClick={() => toggleCropStatusExpansion(index)}
                     >
@@ -972,6 +1001,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
                         )}
                       </div>
                     </div>
+                    <div style={{ height: '1px', backgroundColor: '#e8f5e8', marginBottom: expandedCropStatus[index] ? '0.6rem' : '0' }} />
                     {expandedCropStatus[index] && (
                       <>
                         <div style={{ fontSize: '0.4rem', color: '#495057', lineHeight: '1', marginLeft: '1rem', marginBottom: '0.6rem' }}>
@@ -1152,14 +1182,24 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
         }}
         record={selectedCropStatusRecord}
       />
-      <DeleteCropStatusModal
+      {/* Delete Crop Status Record Alert */}
+      <AlertModal
         isOpen={showDeleteCropStatusAlert}
         onClose={() => {
           setShowDeleteCropStatusAlert(false);
           setSelectedCropStatusRecord(null);
         }}
+        type="delete"
+        title="Confirm Deletion"
+        message="Are you sure you want to delete this crop survey status record? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        showCancel={true}
         onConfirm={handleDeleteCropStatusConfirm}
-        record={selectedCropStatusRecord}
+        onCancel={() => {
+          setShowDeleteCropStatusAlert(false);
+          setSelectedCropStatusRecord(null);
+        }}
       />
       <EditBeneficiaryModal
         isOpen={showEditBeneficiary}

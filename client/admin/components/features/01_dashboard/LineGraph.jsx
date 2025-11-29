@@ -149,8 +149,8 @@ const LineGraph = ({ active }) => {
           >
             <defs>
               <linearGradient id="seedlingGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--chart-gradient-dark)" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="var(--chart-gradient-light)" stopOpacity={0.1}/>
+                <stop offset="5%" stopColor="var(--teal)" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="var(--teal)" stopOpacity={0.1}/>
               </linearGradient>
               <linearGradient id="aliveGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="var(--success)" stopOpacity={0.8}/>
@@ -189,8 +189,8 @@ const LineGraph = ({ active }) => {
               <Line 
                 type="monotone"
                 dataKey="seedlings" 
-                stroke="var(--chart-gradient-dark)" 
-                dot={{ fill: 'var(--chart-gradient-dark)', r: 4 }}
+                stroke="var(--teal)" 
+                dot={{ fill: 'var(--teal)', r: 4 }}
                 activeDot={{ r: 6 }}
                 strokeWidth={2.5}
                 fill="url(#seedlingGradient)"
@@ -235,7 +235,7 @@ const LineGraph = ({ active }) => {
               width: '8px',
               height: '8px',
               borderRadius: '50%',
-              backgroundColor: 'var(--chart-gradient-dark)',
+              backgroundColor: 'var(--teal)',
               marginRight: '0.4rem'
             }}></div>
             <span>Coffee Seedlings</span>

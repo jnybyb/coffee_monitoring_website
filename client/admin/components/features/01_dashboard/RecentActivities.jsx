@@ -5,6 +5,7 @@ import { HiUsers } from 'react-icons/hi2';
 import { BsClipboard2DataFill } from 'react-icons/bs';
 import { GiCoffeeBeans } from 'react-icons/gi';
 import { PiPlantFill } from 'react-icons/pi';
+import { NoRecentActivities } from '../../ui/NoDataDisplay';
 
 const RecentActivities = ({ active, limit = 10, showViewAll = false }) => {
   const [activities, setActivities] = useState([]);
@@ -170,17 +171,12 @@ const RecentActivities = ({ active, limit = 10, showViewAll = false }) => {
         gap: '0.5rem',
         flex: 1,
         overflowY: 'auto',
-        paddingRight: '0.25rem'
+        paddingRight: '0.25rem',
+        justifyContent: activities.length === 0 ? 'center' : 'flex-start',
+        alignItems: activities.length === 0 ? 'center' : 'stretch'
       }}>
         {activities.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '2rem',
-            color: 'var(--text-gray)',
-            fontSize: '0.875rem'
-          }}>
-            No recent activities found
-          </div>
+          <NoRecentActivities />
         ) : (
           activities.map((activity) => (
             <div 

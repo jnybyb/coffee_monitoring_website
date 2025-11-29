@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { InputField, SelectField } from '../../ui/FormFields';
 import { CancelButton, SaveButton, AddCoordinateButton } from '../../ui/BeneficiaryButtons';
+import { farmPlotsAPI } from '../../../services/api';
+import LoadingModal from '../../ui/LoadingModal';
+import AlertModal from '../../ui/AlertModal';
 
 const modalStyle = {
   position: 'fixed',
@@ -16,17 +19,24 @@ const modalStyle = {
 };
 
 const formStyle = {
-  backgroundColor: 'white',
+  backgroundColor: 'var(--white)',
   borderRadius: '5px',
-  padding: '0 0.75rem',
   maxWidth: '450px',
   width: '85%',
   maxHeight: '90vh',
-  overflowY: 'auto',
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
   position: 'relative',
-  scrollbarWidth: 'none',
+  display: 'flex',
+  flexDirection: 'column',
+};
+
+// Add new style for scrollable content area
+const contentAreaStyle = {
+  overflowY: 'auto',
+  scrollbarWidth: 'thin',
   msOverflowStyle: 'none',
+  padding: '0 0.75rem',
+  flex: 1,
 };
 
 const headerStyle = {
@@ -34,9 +44,10 @@ const headerStyle = {
   justifyContent: 'space-between',
   alignItems: 'center',
   borderBottom: '.5px solid var(--border-gray)',
-  padding: '1.4rem 1rem',
-  background: 'white',
+  padding: '1.4rem 1.4rem',
+  background: 'var(--white)',
   position: 'sticky',
+  borderRadius: '5px',
   top: 0,
   zIndex: 10,
 };
@@ -59,8 +70,9 @@ const closeBtnStyle = {
 const labelStyle = {
   fontWeight: 500,
   fontSize: 11,
-  marginBottom: '0.5rem',
+  marginBottom: '0.1rem',
   display: 'block',
+  color: 'var(--dark-green)',
 };
 
 const readOnlyInputStyle = {
@@ -70,7 +82,7 @@ const readOnlyInputStyle = {
   border: '1px solid var(--border-gray)',
   fontSize: 11,
   marginBottom: 0,
-  background: '#f5f5f5',
+  background: 'var(--white)',
   color: 'var(--dark-text)',
   cursor: 'not-allowed',
   height: '30px',
@@ -82,7 +94,7 @@ const buttonRowStyle = {
   gap: '0.75rem',
   justifyContent: 'flex-end',
   paddingTop: '0.75rem',
-  borderTop: '1px solid var(--border-gray)'
+  borderTop: 'rgba(0, 0, 0, 0.035)',
 };
 
 const coordinateRowStyle = {
@@ -90,27 +102,32 @@ const coordinateRowStyle = {
   gap: 6,
   alignItems: 'flex-start',
   padding: '6px 10px',
-  backgroundColor: '#f8f9fa',
+  backgroundColor: 'rgba(5, 80, 53, 0.08)',
   borderRadius: 4,
   marginBottom: 6,
   border: '1px solid var(--border-gray)',
+  position: 'relative',
 };
 
 const removeButtonStyle = {
-  background: 'var(--red)',
+  background: 'none',
   border: 'none',
   borderRadius: 4,
   padding: '3px 6px',
-  color: 'var(--white)',
+  color: 'var(--dark-green)',
   cursor: 'pointer',
-  fontSize: 11,
-  fontWeight: 'bold',
+  fontSize: 18,
+  fontWeight: '400',
   minWidth: '20px',
   height: '20px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  marginTop: '16px',
+  marginTop: '0px',
+  transition: 'all 0.2s ease',
+  position: 'absolute',
+  top: '6px',
+  right: '10px',
 };
 
 const sectionTitleStyle = {
@@ -212,15 +229,69 @@ const formatSelectedAddress = (beneficiary) => {
 
 function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBeneficiary, isLoading = false }) {
   const [selectedId, setSelectedId] = useState('');
+  const [hectares, setHectares] = useState('');
+  const [generatedPlotId, setGeneratedPlotId] = useState('Auto-generated');
   const [coordinates, setCoordinates] = useState([
-    { lat: '', lng: '' },
-    { lat: '', lng: '' },
-    { lat: '', lng: '' }
-  ]); // Start with 3 minimum coordinates
+    { lat: '', lng: '', elevation: '' },
+    { lat: '', lng: '', elevation: '' },
+    { lat: '', lng: '', elevation: '' },
+    { lat: '', lng: '', elevation: '' }
+  ]); // Start with 4 minimum coordinates
   const [errors, setErrors] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Find selected beneficiary object
   const selected = beneficiaries?.find(b => b.beneficiaryId === selectedId || b.id === selectedId) || {};
+
+  // Generate Plot ID when beneficiary is selected
+  useEffect(() => {
+    const generatePlotId = async () => {
+      if (selectedId) {
+        try {
+          // Extract beneficiary number from ID (e.g., 'BEN-001' -> '001')
+          const beneficiaryNumber = selectedId.substring(4);
+          
+          // Fetch existing plots for this beneficiary
+          const allPlots = await farmPlotsAPI.getAll();
+          
+          // Filter plots for this beneficiary
+          const beneficiaryPlots = allPlots.filter(plot => plot.beneficiaryId === selectedId);
+          
+          // Determine next plot number
+          let nextPlotNumber = 1;
+          if (beneficiaryPlots.length > 0) {
+            // Extract plot numbers and find the highest
+            const plotNumbers = beneficiaryPlots.map(plot => {
+              const plotId = plot.id;
+              const plPosition = plotId.indexOf('-PL');
+              if (plPosition !== -1) {
+                const plotNumberPart = plotId.substring(plPosition + 3);
+                return parseInt(plotNumberPart, 10);
+              }
+              return 0;
+            }).filter(num => !isNaN(num));
+            
+            if (plotNumbers.length > 0) {
+              nextPlotNumber = Math.max(...plotNumbers) + 1;
+            }
+          }
+          
+          // Format plot ID: BXXX-PLYY
+          const formattedPlotNumber = nextPlotNumber.toString().padStart(2, '0');
+          const plotId = `B${beneficiaryNumber}-PL${formattedPlotNumber}`;
+          setGeneratedPlotId(plotId);
+        } catch (error) {
+          console.error('Error generating plot ID:', error);
+          setGeneratedPlotId('Auto-generated');
+        }
+      } else {
+        setGeneratedPlotId('Auto-generated');
+      }
+    };
+
+    generatePlotId();
+  }, [selectedId]);
 
   // Set selected beneficiary when modal opens or when selectedBeneficiary prop changes
   useEffect(() => {
@@ -232,22 +303,27 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
   useEffect(() => {
     if (!isOpen) {
       setSelectedId('');
+      setHectares('');
+      setGeneratedPlotId('Auto-generated');
       setCoordinates([
-        { lat: '', lng: '' },
-        { lat: '', lng: '' },
-        { lat: '', lng: '' }
+        { lat: '', lng: '', elevation: '' },
+        { lat: '', lng: '', elevation: '' },
+        { lat: '', lng: '', elevation: '' },
+        { lat: '', lng: '', elevation: '' }
       ]);
       setErrors({});
+      setIsSaving(false);
+      setShowSuccessModal(false);
     }
   }, [isOpen]);
 
   const addCoordinate = () => {
-    setCoordinates([...coordinates, { lat: '', lng: '' }]);
+    setCoordinates([...coordinates, { lat: '', lng: '', elevation: '' }]);
   };
 
   const removeCoordinate = (index) => {
-    // Only allow removal if we have more than 3 coordinates
-    if (coordinates.length > 3) {
+    // Only allow removal if we have more than 4 coordinates
+    if (coordinates.length > 4) {
       setCoordinates(coordinates.filter((_, i) => i !== index));
     }
   };
@@ -295,7 +371,10 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
         throw new Error(`Invalid longitude value at point ${i + 1} (must be between -180 and 180)`);
       }
       
-      validCoordinates.push({ lat, lng });
+      // Parse elevation (optional)
+      const elevation = coord.elevation ? parseInt(coord.elevation, 10) : null;
+      
+      validCoordinates.push({ lat, lng, elevation });
     }
     
     return validCoordinates;
@@ -304,7 +383,7 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (isLoading) return; // Prevent submission while loading
+    if (isLoading || isSaving) return; // Prevent submission while loading
     
     const newErrors = {};
     
@@ -314,8 +393,8 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
     
     // Validate coordinates
     const validCoordinates = coordinates.filter(coord => coord.lat && coord.lng);
-    if (validCoordinates.length < 3) {
-      newErrors.coordinates = 'At least 3 coordinate points are required to define a plot boundary';
+    if (validCoordinates.length < 4) {
+      newErrors.coordinates = 'At least 4 coordinate points are required to define a plot boundary';
     }
     
     setErrors(newErrors);
@@ -325,19 +404,27 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
       // Convert and validate all coordinates
       const convertedCoordinates = validateAndConvertCoordinates(validCoordinates);
       
-      // Close modal immediately and let parent handle loading/success
-      onClose();
+      // Start saving
+      setIsSaving(true);
       
-      // Call the onSubmit function (parent will handle loading and success)
+      // Call the onSubmit function
       await onSubmit({
         beneficiaryId: selected.beneficiaryId || selected.id,
         fullName: selected.fullName || selected.name,
         address: selected.address,
-        coordinates: convertedCoordinates,
+        hectares: hectares ? parseFloat(hectares) : null,
+        coordinates: convertedCoordinates
       });
+      
+      // Success - stop saving and show success modal
+      setIsSaving(false);
+      setShowSuccessModal(true);
+      
+      // Note: AlertModal's autoClose will trigger onClose after 2 seconds
       
     } catch (error) {
       // If there's an error, show it in the modal
+      setIsSaving(false);
       newErrors.coordinates = error.message || 'Failed to save farm plot';
       setErrors(newErrors);
     }
@@ -348,7 +435,7 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
   return (
     <div style={modalStyle}>
       <form style={formStyle} onSubmit={handleSubmit} className="hide-scrollbar-modal">
-        {/* Modal Header */}
+        {/* Modal Header - stays fixed above scrollable content */}
         <div style={headerStyle}>
           <h2 style={{ color: 'var(--dark-green)', margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>Add Farm Plot</h2>
           <button
@@ -363,138 +450,228 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
           </button>
         </div>
 
-        <div style={formBodyStyle}>
-        <div style={twoColRowStyle}>
-          <div style={twoColColStyle}>
-            {selectedBeneficiary ? (
-              <div>
-                <label style={labelStyle}>Beneficiary Full Name</label>
+        {/* Scrollable content area */}
+        <div style={contentAreaStyle}>
+          <div style={formBodyStyle}>
+            <div style={twoColRowStyle}>
+              <div style={twoColColStyle}>
+                {selectedBeneficiary ? (
+                  <div>
+                    <label style={labelStyle}>Beneficiary Full Name</label>
+                    <input
+                      style={readOnlyInputStyle}
+                      value={selectedBeneficiary.fullName || selectedBeneficiary.name || `${selectedBeneficiary.firstName || ''} ${selectedBeneficiary.middleName || ''} ${selectedBeneficiary.lastName || ''}`.trim()}
+                      readOnly
+                      tabIndex={-1}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <SelectField
+                      name="beneficiaryId"
+                      label="Beneficiary Full Name"
+                      value={selectedId}
+                      onChange={e => setSelectedId(e.target.value)}
+                      options={beneficiaries?.map(b => ({
+                        value: b.beneficiaryId || b.id,
+                        label: b.fullName || b.name || `${b.firstName || ''} ${b.middleName || ''} ${b.lastName || ''}`.trim()
+                      })) || []}
+                      placeholder="Select beneficiary"
+                      required
+                      error={errors.selectedId}
+                    />
+                  </div>
+                )}
+              </div>
+              <div style={twoColColStyle}>
+                <label style={labelStyle}>Beneficiary ID</label>
                 <input
                   style={readOnlyInputStyle}
-                  value={selectedBeneficiary.fullName || selectedBeneficiary.name || `${selectedBeneficiary.firstName || ''} ${selectedBeneficiary.middleName || ''} ${selectedBeneficiary.lastName || ''}`.trim()}
+                  value={selectedBeneficiary ? (selectedBeneficiary.beneficiaryId || selectedBeneficiary.id || '') : (selected.beneficiaryId || selected.id || '')}
                   readOnly
                   tabIndex={-1}
                 />
               </div>
-            ) : (
-              <div>
-                <SelectField
-                  name="beneficiaryId"
-                  label="Beneficiary Full Name"
-                  value={selectedId}
-                  onChange={e => setSelectedId(e.target.value)}
-                  options={beneficiaries?.map(b => ({
-                    value: b.beneficiaryId || b.id,
-                    label: b.fullName || b.name || `${b.firstName || ''} ${b.middleName || ''} ${b.lastName || ''}`.trim()
-                  })) || []}
-                  placeholder="Select beneficiary"
-                  required
-                  error={errors.selectedId}
-                />
-              </div>
-            )}
-          </div>
-          <div style={twoColColStyle}>
-            <label style={labelStyle}>Beneficiary ID</label>
-            <input
-              style={readOnlyInputStyle}
-              value={selectedBeneficiary ? (selectedBeneficiary.beneficiaryId || selectedBeneficiary.id || '') : (selected.beneficiaryId || selected.id || '')}
-              readOnly
-              tabIndex={-1}
-            />
-          </div>
-        </div>
+            </div>
 
             <div>
-          <label style={labelStyle}>Address</label>
+              <label style={labelStyle}>Address</label>
               <input
-            style={readOnlyInputStyle}
-            value={selectedBeneficiary ? formatSelectedAddress(selectedBeneficiary) : formatSelectedAddress(selected)}
+                style={readOnlyInputStyle}
+                value={selectedBeneficiary ? formatSelectedAddress(selectedBeneficiary) : formatSelectedAddress(selected)}
                 readOnly
-            tabIndex={-1}
+                tabIndex={-1}
               />
             </div>
 
-            <div>
-          <div style={sectionTitleStyle}>Plot Boundary Coordinates</div>
-          <p style={{ fontSize: 8.5, color: 'var(--dark-text)', marginBottom: 10 }}>
-            Add coordinate points to define the plot boundary. Minimum 3 points required.
-          </p>
-          
-          {coordinates.map((coord, index) => (
-            <div key={index} style={coordinateRowStyle}>
-              <div style={coordinateInputStyle}>
-                <div style={pointTitleStyle}>Point {index + 1}</div>
-                <div style={coordinateFieldsStyle}>
-                  <div style={{ flex: 1 }}>
-                    <InputField
-                      name={`lat-${index}`}
-                      label="Latitude"
-                      value={coord.lat}
-                      onChange={e => updateCoordinate(index, 'lat', e.target.value)}
-                      placeholder=" "
-                      labelFontSize="9px"
-                      labelMarginBottom="2px"
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <InputField
-                      name={`lng-${index}`}
-                      label="Longitude"
-                      value={coord.lng}
-                      onChange={e => updateCoordinate(index, 'lng', e.target.value)}
-                      placeholder=" "
-                      labelFontSize="9px"
-                      labelMarginBottom="2px"
-                    />
-                  </div>
-                </div>
-          </div>
-              {coordinates.length > 3 && (
-          <button
-            type="button"
-                  style={removeButtonStyle}
-                  onClick={() => removeCoordinate(index)}
-                  title="Remove coordinate"
-                >
-                  ×
-          </button>
-              )}
+            <div style={twoColRowStyle}>
+              <div style={twoColColStyle}>
+                <label style={labelStyle}>Plot ID</label>
+                <input
+                  style={readOnlyInputStyle}
+                  value={generatedPlotId}
+                  readOnly
+                  tabIndex={-1}
+                  title={generatedPlotId === 'Auto-generated' ? 'Plot ID will be automatically generated' : `Generated Plot ID: ${generatedPlotId}`}
+                />
+              </div>
+              <div style={twoColColStyle}>
+                <InputField
+                  name="hectares"
+                  label="Hectares"
+                  type="number"
+                  value={hectares}
+                  onChange={e => setHectares(e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  error={errors.hectares}
+                />
+              </div>
             </div>
-          ))}
-          
-          <AddCoordinateButton onClick={addCoordinate}>
-            + Add Coordinate Point
-          </AddCoordinateButton>
-          
-          {errors.coordinates && <div style={{ color: 'var(--red-error)', fontSize: 10, marginTop: 6 }}>{errors.coordinates}</div>}
-        </div>
 
-        <div style={{ ...buttonRowStyle, padding: '1rem 0 1rem 1rem' }}>
-          <CancelButton 
-            onClick={onClose} 
-            disabled={isLoading}
-            fontSize="11px"
-            padding="10px 18px"
-            borderRadius="5px"
-          >
-            Cancel
-          </CancelButton>
-          <SaveButton 
-            disabled={isLoading}
-            fontSize="11px"
-            padding="10px 18px"
-            borderRadius="5px"
-          >
-            {isLoading ? 'Saving...' : 'Save Plot'}
-          </SaveButton>
-        </div>
+            <div>
+              <div style={sectionTitleStyle}>Plot Boundary Coordinates</div>
+              <p style={{ fontSize: 8.5, color: 'var(--dark-text)', marginBottom: 10 }}>
+                Add coordinate points to define the plot boundary. Minimum 4 points required.
+              </p>
+              
+              {coordinates.map((coord, index) => (
+                <div key={index} style={coordinateRowStyle}>
+                  <div style={coordinateInputStyle}>
+                    <div style={pointTitleStyle}>Point {index + 1}</div>
+                    <div style={coordinateFieldsStyle}>
+                      <div style={{ flex: 1 }}>
+                        <InputField
+                          name={`lat-${index}`}
+                          label="Latitude"
+                          value={coord.lat}
+                          onChange={e => updateCoordinate(index, 'lat', e.target.value)}
+                          placeholder=" "
+                          labelFontSize="9px"
+                          labelMarginBottom="2px"
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <InputField
+                          name={`lng-${index}`}
+                          label="Longitude"
+                          value={coord.lng}
+                          onChange={e => updateCoordinate(index, 'lng', e.target.value)}
+                          placeholder=" "
+                          labelFontSize="9px"
+                          labelMarginBottom="2px"
+                        />
+                      </div>
+                      <div style={{ flex: 0.7 }}>
+                        <InputField
+                          name={`elevation-${index}`}
+                          label="Elevation (m)"
+                          type="number"
+                          value={coord.elevation}
+                          onChange={e => updateCoordinate(index, 'elevation', e.target.value)}
+                          placeholder=" "
+                          labelFontSize="9px"
+                          labelMarginBottom="2px"
+                        />
+                      </div>
+                    </div>
+              </div>
+                  {coordinates.length >= 5 && (
+              <button
+                type="button"
+                    style={removeButtonStyle}
+                    onClick={() => removeCoordinate(index)}
+                    title="Remove coordinate"
+                    onMouseEnter={(e) => {
+                      e.target.style.color = 'var(--danger-red)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.color = 'var(--dark-green)';
+                    }}
+                  >
+                    ×
+              </button>
+                  )}
+                </div>
+              ))}
+              
+              <AddCoordinateButton onClick={addCoordinate}>
+                + Add Coordinate Point
+              </AddCoordinateButton>
+              
+              {errors.coordinates && <div style={{ color: 'var(--danger-red)', fontSize: 10, marginTop: 6 }}>{errors.coordinates}</div>}
+            </div>
+
+            <div style={{ ...buttonRowStyle, padding: '1rem 0 1rem 1rem' }}>
+              <CancelButton 
+                onClick={onClose} 
+                disabled={isLoading || isSaving}
+                fontSize="11px"
+                padding="10px 18px"
+                borderRadius="5px"
+              >
+                Cancel
+              </CancelButton>
+              <SaveButton 
+                disabled={isLoading || isSaving}
+                fontSize="11px"
+                padding="10px 18px"
+                borderRadius="5px"
+              >
+                {isSaving ? 'Saving...' : 'Save Plot'}
+              </SaveButton>
+            </div>
+          </div>
         </div>
       </form>
+
+      {/* Loading Modal */}
+      <LoadingModal
+        isOpen={isSaving}
+        title="Saving plot..."
+        message="Please wait while we save your farm plot"
+        dismissible={false}
+        spinnerColor="var(--dark-green)"
+      />
+
+      {/* Success Modal */}
+      <AlertModal
+        isOpen={showSuccessModal}
+        onClose={() => {
+          setShowSuccessModal(false);
+          onClose();
+        }}
+        type="success"
+        title="Plot Saved Successfully!"
+        message="The farm plot has been added."
+        autoClose={true}
+        autoCloseDelay={2000}
+        hideButton={true}
+        maxWidth={300}
+        borderRadius={6}
+      />
     </div>
   );
 }
 
 export default AddFarmPlotModal;
 
-
+<style>
+{`
+  .hide-scrollbar-modal::-webkit-scrollbar {
+    width: 6px;
+  }
+  .hide-scrollbar-modal::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+  .hide-scrollbar-modal::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+  }
+  .hide-scrollbar-modal::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+`}
+</style>
