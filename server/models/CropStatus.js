@@ -6,7 +6,7 @@ class CropStatus {
     const [rows] = await getPromisePool().query(`
       SELECT cs.*, 
              bd.first_name, bd.middle_name, bd.last_name, bd.picture as beneficiary_picture
-      FROM crop_status cs
+      FROM crop_survey_status cs
       JOIN beneficiaries bd ON bd.beneficiary_id = cs.beneficiary_id
       ORDER BY cs.survey_date DESC, cs.created_at DESC
     `);
@@ -23,7 +23,7 @@ class CropStatus {
         beneficiaryPicture: r.beneficiary_picture ? `/uploads/${path.basename(r.beneficiary_picture)}` : null,
         aliveCrops: r.alive_crops,
         deadCrops: r.dead_crops,
-        plot: r.plot || null,
+        plotId: r.plot_id || null,
         pictures: pictures
       };
     });
@@ -33,7 +33,7 @@ class CropStatus {
     const [rows] = await getPromisePool().query(`
       SELECT cs.*, 
              bd.first_name, bd.middle_name, bd.last_name, bd.picture as beneficiary_picture
-      FROM crop_status cs
+      FROM crop_survey_status cs
       JOIN beneficiaries bd ON bd.beneficiary_id = cs.beneficiary_id
       WHERE cs.id = ?
     `, [id]);
@@ -52,7 +52,7 @@ class CropStatus {
       beneficiaryPicture: r.beneficiary_picture ? `/uploads/${path.basename(r.beneficiary_picture)}` : null,
       aliveCrops: r.alive_crops,
       deadCrops: r.dead_crops,
-      plot: r.plot || null,
+      plotId: r.plot_id || null,
       pictures: pictures
     };
   }
@@ -60,8 +60,8 @@ class CropStatus {
   static async create(cropStatusData, pictureFiles = []) {
     const files = pictureFiles.map(f => path.basename(f.path));
     
-    const sql = `INSERT INTO crop_status 
-      (survey_date, surveyer, beneficiary_id, alive_crops, dead_crops, plot, pictures)
+    const sql = `INSERT INTO crop_survey_status 
+      (survey_date, surveyer, beneficiary_id, alive_crops, dead_crops, plot_id, pictures)
       VALUES (?, ?, ?, ?, ?, ?, ?)`;
     const params = [
       cropStatusData.surveyDate,
@@ -69,7 +69,7 @@ class CropStatus {
       cropStatusData.beneficiaryId,
       parseInt(cropStatusData.aliveCrops),
       parseInt(cropStatusData.deadCrops || 0),
-      cropStatusData.plot || null,
+      cropStatusData.plotId || null,
       JSON.stringify(files)
     ];
     
@@ -93,7 +93,7 @@ class CropStatus {
       }
     } else {
       // Fallback: fetch current pictures from DB if not explicitly provided
-      const [rows] = await getPromisePool().query('SELECT pictures FROM crop_status WHERE id = ?', [id]);
+      const [rows] = await getPromisePool().query('SELECT pictures FROM crop_survey_status WHERE id = ?', [id]);
       if (rows && rows.length) {
         try {
           const parsed = Array.isArray(rows[0].pictures) ? rows[0].pictures : (rows[0].pictures ? JSON.parse(rows[0].pictures) : []);
@@ -106,8 +106,8 @@ class CropStatus {
 
     const finalPictures = [...existingPictures, ...uploadedFiles];
 
-    const sql = `UPDATE crop_status SET 
-      survey_date = ?, surveyer = ?, beneficiary_id = ?, alive_crops = ?, dead_crops = ?, plot = ?, pictures = ?
+    const sql = `UPDATE crop_survey_status SET 
+      survey_date = ?, surveyer = ?, beneficiary_id = ?, alive_crops = ?, dead_crops = ?, plot_id = ?, pictures = ?
       WHERE id = ?`;
     const params = [
       cropStatusData.surveyDate,
@@ -115,7 +115,7 @@ class CropStatus {
       cropStatusData.beneficiaryId,
       parseInt(cropStatusData.aliveCrops),
       parseInt(cropStatusData.deadCrops || 0),
-      cropStatusData.plot || null,
+      cropStatusData.plotId || null,
       JSON.stringify(finalPictures),
       id
     ];
@@ -125,7 +125,7 @@ class CropStatus {
   }
 
   static async delete(id) {
-    const [result] = await getPromisePool().query('DELETE FROM crop_status WHERE id = ?', [id]);
+    const [result] = await getPromisePool().query('DELETE FROM crop_survey_status WHERE id = ?', [id]);
     return result.affectedRows > 0;
   }
 }

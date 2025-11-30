@@ -174,3 +174,14 @@ export const LoggingInModal = ({ isOpen, onClose }) => (
     onClose={onClose}
   />
 );
+
+export const DeleteLoadingModal = ({ isOpen, onClose }) => (
+  <LoadingModal 
+    isOpen={isOpen} 
+    title="Deleting..." 
+    message="Removing item" 
+    dismissible={false} 
+    spinnerColor="#dc3545"
+    onClose={onClose}
+  />
+);

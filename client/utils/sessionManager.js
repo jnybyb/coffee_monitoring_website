@@ -15,6 +15,13 @@ class SessionManager {
     try {
       await this.updateServerStartupTime();
       this.startPeriodicCheck();
+      
+      // Clean up on page unload
+      if (typeof window !== 'undefined') {
+        window.addEventListener('beforeunload', () => {
+          this.stopPeriodicCheck();
+        });
+      }
     } catch (error) {
       console.error('Failed to initialize session manager:', error);
     }
@@ -22,14 +29,25 @@ class SessionManager {
 
   async updateServerStartupTime() {
     try {
-      const response = await fetch('/api/server-startup');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const response = await fetch('/api/server-startup', {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
       if (response.ok) {
         const data = await response.json();
         this.serverStartupTime = data.serverStartup;
         console.log('Server startup time updated:', new Date(this.serverStartupTime).toISOString());
       }
     } catch (error) {
-      console.error('Failed to get server startup time:', error);
+      // Silently handle errors during initialization
+      if (error.name !== 'AbortError') {
+        console.warn('Failed to get server startup time:', error.message);
+      }
     }
   }
 
@@ -48,7 +66,15 @@ class SessionManager {
 
   async checkServerRestart() {
     try {
-      const response = await fetch('/api/server-startup');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const response = await fetch('/api/server-startup', {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
       if (response.ok) {
         const data = await response.json();
         
@@ -65,7 +91,10 @@ class SessionManager {
         }
       }
     } catch (error) {
-      console.error('Failed to check server restart:', error);
+      // Silently handle errors to avoid console spam
+      if (error.name !== 'AbortError') {
+        console.warn('Failed to check server restart:', error.message);
+      }
     }
   }
 

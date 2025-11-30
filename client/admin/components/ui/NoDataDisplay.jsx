@@ -1,4 +1,6 @@
 import React from 'react';
+import { MdLocationOff } from "react-icons/md";
+import { BiHistory } from "react-icons/bi";
 
 const NoDataDisplay = ({ 
   icon, 
@@ -46,6 +48,68 @@ const NoDataDisplay = ({
           {subtitle}
         </p>
       )}
+    </div>
+  );
+};
+
+// Specialized component for "No other farm plots" display
+export const NoOtherFarmPlots = () => {
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '1rem',
+      textAlign: 'center',
+      width: '100%'
+    }}>
+      <div style={{ 
+        color: '#adb5bd', 
+        marginBottom: '0.1rem',
+        fontSize: '24px'
+      }}>
+        <MdLocationOff />
+      </div>
+      <p style={{
+        color: '#6c757d',
+        fontSize: '11px',
+        fontWeight: 500,
+        margin: 0
+      }}>
+        No other farm plots.
+      </p>
+    </div>
+  );
+};
+
+// Specialized component for "No recent activities found" display
+export const NoRecentActivities = () => {
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '1rem',
+      textAlign: 'center',
+      width: '100%'
+    }}>
+      <div style={{ 
+        color: '#adb5bd', 
+        marginBottom: '0.1rem',
+        fontSize: '24px'
+      }}>
+        <BiHistory />
+      </div>
+      <p style={{
+        color: '#6c757d',
+        fontSize: '11px',
+        fontWeight: 500,
+        margin: 0
+      }}>
+        No recent activities found.
+      </p>
     </div>
   );
 };

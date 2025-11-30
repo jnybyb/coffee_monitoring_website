@@ -133,25 +133,14 @@
     --dark-brown: #4b2e2e;
     --red-error: #b00020;
     --gray-icon: #a9a9a9;
-
-    
-
-    --mint-green: #98dfb7;
-    --olive-green: #708238;
-    --forest-green: #183c1b;
-    /* --dark-green: #055035;  
-    --primary-green: #055035; */
     --danger-red: #F44336;
-    --teal: #20B2AA;
-
-   
-    --deep-brown: rgb(45, 27, 26);
-    --tan: #a1866f;
-    --beige: #F5F5DC;
-    --ivory: #FFFFF0;
-    --gray: #CED4DA;
     --dark-text: #666;
     --placeholder-text: #6c757d;
+    --teal: #008B8B;
+    --olive-green: #6B8E23;
+    --mint-green: #E8F5E9;
+
+
     
     /* Utility colors */
     --red: #DC3545;
@@ -159,7 +148,6 @@
     --warning: #ffc107;
     --info: #17a2b8;
     --pagination-gray: #495057;
-    --pagination-border: #dee2e6;
     --pagination-hover: #e8f5e8;
     --gradient-light: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     
@@ -214,6 +202,31 @@
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+  }
+
+  /* ============================
+     CUSTOM LOCATION MARKER STYLES
+     ============================ */
+  
+  /* Remove default Leaflet marker styles */
+  .custom-location-marker {
+    background: transparent !important;
+    border: none !important;
+  }
+
+  /* Ensure the marker SVG and content render properly */
+  .custom-location-marker svg {
+    display: block;
+  }
+
+  /* Custom popup styles */
+  .custom-popup .leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    padding: 0;
+  }
+
+  .custom-popup .leaflet-popup-content {
+    margin: 0;
   }
 
 

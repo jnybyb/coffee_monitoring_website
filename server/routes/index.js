@@ -7,6 +7,7 @@ const farmPlotsRouter = require('./farmPlots');
 const addressesRouter = require('./addresses');
 const statisticsRouter = require('./statistics');
 const authRouter = require('./auth');
+const importRouter = require('./import');
 const { authenticate, requireAdmin } = require('../utils/auth');
 
 const router = express.Router();
@@ -22,6 +23,7 @@ router.use('/seedlings', seedlingsRouter);
 router.use('/crop-status', cropStatusRouter);
 router.use('/farm-plots', farmPlotsRouter);
 router.use('/addresses', addressesRouter);
+router.use('/import', importRouter);
 
 module.exports = router;
 

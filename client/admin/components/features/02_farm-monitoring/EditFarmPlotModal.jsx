@@ -449,8 +449,6 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries }) {
     setIsSubmitting(true);
     
     try {
-      const startTime = Date.now();
-      
       // Convert and validate all coordinates
       const convertedCoordinates = validateAndConvertCoordinates(validCoordinates);
       
@@ -465,21 +463,13 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries }) {
         color: plot.color,
       });
       
-      // Calculate elapsed time and ensure minimum display of 1 second for loading modal
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(1000 - elapsedTime, 0);
-      
-      // Wait for remaining time to ensure loading modal shows for at least 1 second
-      if (remainingTime > 0) {
-        await new Promise(resolve => setTimeout(resolve, remainingTime));
-      }
-      
-      // Close loading modal and wait a bit
+      // Close loading modal first
       setIsSubmitting(false);
-      await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Show success modal
-      setShowSuccessModal(true);
+      // Add a small delay before showing success modal to ensure loading modal fully closes
+      setTimeout(() => {
+        setShowSuccessModal(true);
+      }, 100);
     } catch (error) {
       setIsSubmitting(false);
       newErrors.coordinates = error.message || 'Failed to update farm plot';
@@ -496,7 +486,7 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries }) {
   
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
-    setErrors({});
+    // Close the entire edit modal when success modal closes
     onClose();
   };
 
@@ -504,7 +494,7 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries }) {
 
   return (
     <>
-    {isOpen && !showSuccessModal && (
+    {isOpen && (
     <div style={modalStyle}>
       <form style={formStyle} onSubmit={handleSubmit} className="hide-scrollbar-modal">
           {/* Modal Header - stays fixed above scrollable content */}
@@ -673,19 +663,23 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries }) {
       </form>
     </div>
     )}
+
+    {/* Loading Modal */}
     <LoadingModal 
       isOpen={isSubmitting}
       title="Updating..."
       message="Updating farm plot"
     />
+
+    {/* Success Modal */}
     <AlertModal 
       isOpen={showSuccessModal}
       onClose={handleSuccessClose}
       type="success"
-      title="Success!"
+      title="Updated Successfully!"
       message="Farm plot has been updated successfully."
       autoClose={true}
-      autoCloseDelay={1500}
+      autoCloseDelay={2000}
       buttonBorderRadius={4}
       hideButton={true}
     />

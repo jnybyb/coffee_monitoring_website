@@ -134,9 +134,9 @@ export const CancelButton = ({
     fontSize: fontSize || "13px",
     cursor: disabled ? "not-allowed" : "pointer",
     fontWeight: 500,
-    border: borderColor ? `1px solid ${borderColor}` : "1px solid var(--gray)",
+    border: borderColor ? `1px solid ${borderColor}` : "1px solid var(--dark-green)",
     backgroundColor: backgroundColor || "white",
-    color: color || "var(--black)",
+    color: color || "var(--dark-green)",
     opacity: disabled ? 0.6 : 1,
     transition: "all 0.2s ease",
     ...style, // allow overriding styles from child
@@ -347,7 +347,7 @@ export const AddCoordinateButton = ({
   // Core button styles for add coordinate button
   const buttonStyles = {
     padding: padding || '5px 10px',
-    fontSize: fontSize || '11px',
+    fontSize: fontSize || '10px',
     borderRadius: borderRadius || '4px',
     display: 'inline-flex',
     alignItems: 'center',
@@ -415,6 +415,10 @@ export const ActionButton = ({
   padding,
   borderRadius,
   style = {},
+  onMouseEnter,
+  onMouseLeave,
+  onMouseDown,
+  onMouseUp,
 }) => {
   // Define size-based defaults
   const buttonSizes = {
@@ -459,17 +463,36 @@ export const ActionButton = ({
     if (!disabled) {
       e.currentTarget.style.transform = "scale(0.96)";
     }
+    // Call custom onMouseDown if provided
+    if (onMouseDown) {
+      onMouseDown(e);
+    }
   };
 
   const handleMouseUp = (e) => {
     if (!disabled) {
       e.currentTarget.style.transform = "scale(1)";
     }
+    // Call custom onMouseUp if provided
+    if (onMouseUp) {
+      onMouseUp(e);
+    }
+  };
+
+  const handleMouseEnter = (e) => {
+    // Call custom onMouseEnter if provided
+    if (onMouseEnter) {
+      onMouseEnter(e);
+    }
   };
 
   const handleMouseLeave = (e) => {
     if (!disabled) {
       e.currentTarget.style.transform = "scale(1)";
+    }
+    // Call custom onMouseLeave if provided
+    if (onMouseLeave) {
+      onMouseLeave(e);
     }
   };
 
@@ -478,6 +501,7 @@ export const ActionButton = ({
       onClick={!disabled ? onClick : undefined}
       disabled={disabled}
       style={buttonStyles}
+      onMouseEnter={handleMouseEnter}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}

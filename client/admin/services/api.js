@@ -116,6 +116,10 @@ export const beneficiariesAPI = {
   getAll: async () => apiRequest('/beneficiaries'),
   getById: async (id) => apiRequest(`/beneficiaries/${id}`),
   generateId: async () => apiRequest('/beneficiaries/generate-id'),
+  generateMultipleIds: async (count) => apiRequest('/beneficiaries/generate-ids', {
+    method: 'POST',
+    body: JSON.stringify({ count })
+  }),
   create: async (beneficiaryData) => {
     const formData = new FormData();
     Object.keys(beneficiaryData).forEach(key => {
@@ -150,16 +154,12 @@ export const seedlingsAPI = {
     // Validate numeric fields before sending
     const received = parseInt(record.received);
     const planted = parseInt(record.planted);
-    const hectares = parseFloat(record.hectares);
     
     if (isNaN(received) || received <= 0) {
       throw new Error('Received seedlings must be a valid positive number');
     }
     if (isNaN(planted) || planted <= 0) {
       throw new Error('Planted seedlings must be a valid positive number');
-    }
-    if (isNaN(hectares) || hectares <= 0) {
-      throw new Error('Hectares must be a valid positive number');
     }
     if (planted > received) {
       throw new Error('Planted seedlings cannot exceed received seedlings');
@@ -183,11 +183,9 @@ export const seedlingsAPI = {
       received,
       dateReceived,
       planted,
-      hectares,
-      plot: record.plot,
+      plotId: record.plotId,
       dateOfPlantingStart: record.dateOfPlantingStart || record.dateOfPlanting,
-      dateOfPlantingEnd: record.dateOfPlantingEnd || null,
-      gps: record.gps || null
+      dateOfPlantingEnd: record.dateOfPlantingEnd || null
     };
     return apiRequest('/seedlings', {
       method: 'POST',
@@ -198,16 +196,12 @@ export const seedlingsAPI = {
     // Validate numeric fields before sending
     const received = parseInt(record.received);
     const planted = parseInt(record.planted);
-    const hectares = parseFloat(record.hectares);
     
     if (isNaN(received) || received <= 0) {
       throw new Error('Received seedlings must be a valid positive number');
     }
     if (isNaN(planted) || planted <= 0) {
       throw new Error('Planted seedlings must be a valid positive number');
-    }
-    if (isNaN(hectares) || hectares <= 0) {
-      throw new Error('Hectares must be a valid positive number');
     }
     if (planted > received) {
       throw new Error('Planted seedlings cannot exceed received seedlings');
@@ -231,11 +225,9 @@ export const seedlingsAPI = {
       received,
       dateReceived,
       planted,
-      hectares,
-      plot: record.plot,
+      plotId: record.plotId,
       dateOfPlantingStart: record.dateOfPlantingStart || record.dateOfPlanting,
-      dateOfPlantingEnd: record.dateOfPlantingEnd || null,
-      gps: record.gps || null
+      dateOfPlantingEnd: record.dateOfPlantingEnd || null
     };
     return apiRequest(`/seedlings/${id}`, {
       method: 'PUT',
@@ -316,7 +308,8 @@ export const addressesAPI = {
 // Statistics API
 export const statisticsAPI = {
   getDashboardStats: async () => apiRequest('/statistics'),
-  getChartData: async () => apiRequest('/statistics/chart-data')
+  getChartData: async () => apiRequest('/statistics/chart-data'),
+  getRecentActivities: async (limit = 10) => apiRequest(`/statistics/recent-activities?limit=${limit}`)
 };
 
 // Test API connection
@@ -331,4 +324,25 @@ export const authAPI = {
     body: JSON.stringify({ username, password })
   }),
   me: async () => apiRequest('/auth/me')
+};
+
+// Import API
+export const importAPI = {
+  // Upload raw Excel and get cleaned preview data
+  uploadAndClean: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequestWithFile('/import/bulk', formData, { method: 'POST' });
+  },
+  // Upload farm coordinates Excel and get cleaned preview data
+  uploadFarmCoordinates: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequestWithFile('/import/farm-coordinates', formData, { method: 'POST' });
+  },
+  // Confirm and save the imported data
+  confirmImport: async (data) => apiRequest('/import/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ data })
+  })
 };

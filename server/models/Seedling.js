@@ -2,39 +2,33 @@ const { getPromisePool } = require('../config/database');
 
 class Seedling {
   static async findAll() {
-    const [rows] = await getPromisePool().query('SELECT * FROM seedling_records ORDER BY date_of_planting DESC, created_at DESC');
+    const [rows] = await getPromisePool().query('SELECT * FROM coffee_seedlings ORDER BY date_planting_start DESC, seedling_id DESC');
     return rows.map(r => ({
-      id: r.id,
+      id: r.seedling_id,
       beneficiaryId: r.beneficiary_id,
-      received: r.received || 0,
+      received: r.received_seedling || 0,
       dateReceived: r.date_received,
-      planted: r.planted || 0,
-      hectares: r.hectares ? parseFloat(r.hectares) : 0,
-      plot: r.plot,
-      dateOfPlantingStart: r.date_of_planting,
-      dateOfPlantingEnd: r.date_of_planting_end || null,
-      gps: r.gps,
-      createdAt: r.created_at
+      planted: r.planted_seedling || 0,
+      plotId: r.plot_id || null,
+      dateOfPlantingStart: r.date_planting_start,
+      dateOfPlantingEnd: r.date_planting_end || null
     }));
   }
 
   static async findById(id) {
-    const [rows] = await getPromisePool().query('SELECT * FROM seedling_records WHERE id = ?', [id]);
+    const [rows] = await getPromisePool().query('SELECT * FROM coffee_seedlings WHERE seedling_id = ?', [id]);
     if (!rows.length) return null;
     
     const r = rows[0];
     return {
-      id: r.id,
+      id: r.seedling_id,
       beneficiaryId: r.beneficiary_id,
-      received: r.received || 0,
+      received: r.received_seedling || 0,
       dateReceived: r.date_received,
-      planted: r.planted || 0,
-      hectares: r.hectares ? parseFloat(r.hectares) : 0,
-      plot: r.plot,
-      dateOfPlantingStart: r.date_of_planting,
-      dateOfPlantingEnd: r.date_of_planting_end || null,
-      gps: r.gps,
-      createdAt: r.created_at
+      planted: r.planted_seedling || 0,
+      plotId: r.plot_id || null,
+      dateOfPlantingStart: r.date_planting_start,
+      dateOfPlantingEnd: r.date_planting_end || null
     };
   }
 
@@ -59,7 +53,6 @@ class Seedling {
     // Validate and convert numeric fields with proper error handling
     const received = parseInt(seedlingData.received);
     const planted = parseInt(seedlingData.planted);
-    const hectares = parseFloat(seedlingData.hectares);
     
     // Check for invalid numeric values
     if (isNaN(received) || received <= 0) {
@@ -68,28 +61,23 @@ class Seedling {
     if (isNaN(planted) || planted <= 0) {
       throw new Error('Planted seedlings must be a valid positive number');
     }
-    if (isNaN(hectares) || hectares <= 0) {
-      throw new Error('Hectares must be a valid positive number');
-    }
     
     // Validate that planted doesn't exceed received
     if (planted > received) {
       throw new Error('Planted seedlings cannot exceed received seedlings');
     }
     
-    const sql = `INSERT INTO seedling_records 
-      (beneficiary_id, received, date_received, planted, hectares, plot, date_of_planting, date_of_planting_end, gps)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const sql = `INSERT INTO coffee_seedlings 
+      (beneficiary_id, received_seedling, date_received, planted_seedling, plot_id, date_planting_start, date_planting_end)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`;
     const params = [
       seedlingData.beneficiaryId,
       received,
       dateReceived,
       planted,
-      hectares,
-      seedlingData.plot || null,
+      seedlingData.plotId || null,
       dateStart,
-      dateEnd,
-      seedlingData.gps || null
+      dateEnd
     ];
     
     const [result] = await getPromisePool().query(sql, params);
@@ -117,7 +105,6 @@ class Seedling {
     // Validate and convert numeric fields with proper error handling
     const received = parseInt(seedlingData.received);
     const planted = parseInt(seedlingData.planted);
-    const hectares = parseFloat(seedlingData.hectares);
     
     // Check for invalid numeric values
     if (isNaN(received) || received <= 0) {
@@ -126,28 +113,23 @@ class Seedling {
     if (isNaN(planted) || planted <= 0) {
       throw new Error('Planted seedlings must be a valid positive number');
     }
-    if (isNaN(hectares) || hectares <= 0) {
-      throw new Error('Hectares must be a valid positive number');
-    }
     
     // Validate that planted doesn't exceed received
     if (planted > received) {
       throw new Error('Planted seedlings cannot exceed received seedlings');
     }
     
-    const sql = `UPDATE seedling_records SET 
-      beneficiary_id = ?, received = ?, date_received = ?, planted = ?, hectares = ?, plot = ?, date_of_planting = ?, date_of_planting_end = ?, gps = ?
-      WHERE id = ?`;
+    const sql = `UPDATE coffee_seedlings SET 
+      beneficiary_id = ?, received_seedling = ?, date_received = ?, planted_seedling = ?, plot_id = ?, date_planting_start = ?, date_planting_end = ?
+      WHERE seedling_id = ?`;
     const params = [
       seedlingData.beneficiaryId,
       received,
       dateReceived,
       planted,
-      hectares,
-      seedlingData.plot || null,
+      seedlingData.plotId || null,
       dateStart,
       dateEnd,
-      seedlingData.gps || null,
       id
     ];
     
@@ -156,7 +138,7 @@ class Seedling {
   }
 
   static async delete(id) {
-    const [result] = await getPromisePool().query('DELETE FROM seedling_records WHERE id = ?', [id]);
+    const [result] = await getPromisePool().query('DELETE FROM coffee_seedlings WHERE seedling_id = ?', [id]);
     return result.affectedRows > 0;
   }
 }

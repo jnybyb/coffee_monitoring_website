@@ -57,7 +57,9 @@ const Pagination = ({
     btnNav: {
       backgroundColor: '#f0f7f3',
       border: '1px solid rgba(45, 124, 74, 0.4)',
-      color: '#2d7c4a'
+      color: '#2d7c4a',
+      fontSize: '12px',
+      fontWeight: 600
     },
     btnActive: {
       backgroundColor: 'var(--dark-green)',
@@ -75,34 +77,93 @@ const Pagination = ({
     }
   };
 
+  /**
+   * PAGINATION LAYOUT ALGORITHM
+   * 
+   * Computes which page numbers and ellipsis to display based on current page and total pages.
+   * 
+   * RULES:
+   * 1. Always show: First 2 pages (1, 2) and Last 2 pages (n-1, n)
+   * 2. Show context: Page before and after the active page
+   * 3. Use ellipsis (...): When pages are skipped between sections
+   * 
+   * DECISION LOGIC:
+   * 
+   * Case 1: Total Pages ≤ 7
+   *   - Display all pages without ellipsis
+   *   - Example (5 pages): < 1 2 3 4 5 >
+   *   - Example (7 pages): < 1 2 3 4 5 6 7 >
+   * 
+   * Case 2: Active Page ≤ 3 (Near Start)
+   *   - Display: 1 2 3 [4 if page=3] ... n-1 n
+   *   - Page 1: < 1 2 3 ... 9 10 >
+   *   - Page 2: < 1 2 3 ... 9 10 >
+   *   - Page 3: < 1 2 3 4 ... 9 10 > (shows next page 4)
+   * 
+   * Case 3: Active Page ≥ n-2 (Near End)
+   *   - Display: 1 2 ... [n-3 if page=n-2] n-2 n-1 n
+   *   - Page 10 of 10: < 1 2 ... 8 9 10 >
+   *   - Page 9 of 10: < 1 2 ... 8 9 10 >
+   *   - Page 8 of 10: < 1 2 ... 7 8 9 10 > (shows prev page 7)
+   * 
+   * Case 4: Active Page in Middle (4 to n-3)
+   *   - Display: 1 2 ... (x-1) x (x+1) ... n-1 n
+   *   - Page 7 of 10: < 1 2 ... 6 7 8 ... 9 10 >
+   *   - Page 5 of 10: < 1 2 ... 4 5 6 ... 9 10 >
+   * 
+   * WHEN TO SHOW ELLIPSIS:
+   *   - Left ellipsis: When gap exists between page 2 and the middle section
+   *   - Right ellipsis: When gap exists between the middle section and page (n-1)
+   * 
+   * This ensures users always see:
+   *   - Where they are (current page + neighbors)
+   *   - Where they can jump to (first 2 and last 2 pages)
+   *   - That there are more pages in between (ellipsis)
+   */
   const getPageNumbers = () => {
     const pages = [];
-    const siblingCount = 1;
-    const totalNumbers = siblingCount * 2 + 3; // first, current, last
-    const totalBlocks = totalNumbers + 2; // add two ellipsis
-
-    if (totalPages <= totalBlocks) {
-      for (let i = 1; i <= totalPages; i += 1) pages.push(i);
+    
+    // Case 1: If total pages <= 7, show all pages without ellipsis
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
       return pages;
     }
-
-    const leftSibling = Math.max(currentPage - siblingCount, 1);
-    const rightSibling = Math.min(currentPage + siblingCount, totalPages);
-
-    const showLeftDots = leftSibling > 2;
-    const showRightDots = rightSibling < totalPages - 1;
-
-    if (!showLeftDots && showRightDots) {
-      const leftRange = [1, 2, 3, 4, 5];
-      return [...leftRange, 'dots-right', totalPages];
+    
+    // Always show first 2 pages
+    pages.push(1, 2);
+    
+    // Case 2: Current page is 1, 2, or 3 (Near Start)
+    if (currentPage <= 3) {
+      // Show: 1 2 3 ... 8 9 (for pages 1 and 2)
+      // Show: 1 2 3 4 ... 8 9 (for page 3)
+      pages.push(3); // Always show page 3
+      if (currentPage === 3) pages.push(4); // Show page 4 only when active page is 3
+      pages.push('dots-right'); // Add right ellipsis
+      pages.push(totalPages - 1, totalPages); // Add last 2 pages
     }
-
-    if (showLeftDots && !showRightDots) {
-      const rightRange = [totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
-      return [1, 'dots-left', ...rightRange];
+    // Case 3: Current page is in last 3 pages (Near End)
+    else if (currentPage >= totalPages - 2) {
+      // Show: 1 2 ... 6 7 8 9 (if current is 7, 8, or 9)
+      pages.push('dots-left'); // Add left ellipsis
+      if (currentPage === totalPages - 2) {
+        pages.push(totalPages - 3, totalPages - 2); // Show 2 pages before last 2
+      } else {
+        pages.push(totalPages - 2); // Show 1 page before last 2
+      }
+      pages.push(totalPages - 1, totalPages); // Add last 2 pages
     }
-
-    return [1, 'dots-left', leftSibling, currentPage, rightSibling, 'dots-right', totalPages];
+    // Case 4: Current page is in the middle (show prev, current, next)
+    else {
+      // Show: 1 2 ... 6 7 8 ... 9 10 (for page 7 of 10)
+      pages.push('dots-left'); // Add left ellipsis
+      pages.push(currentPage - 1, currentPage, currentPage + 1); // Show current page and neighbors
+      pages.push('dots-right'); // Add right ellipsis
+      pages.push(totalPages - 1, totalPages); // Add last 2 pages
+    }
+    
+    return pages;
   };
 
   const pageNumbers = getPageNumbers();

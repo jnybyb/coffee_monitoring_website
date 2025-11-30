@@ -66,6 +66,20 @@ class Address {
     
     return [];
   }
+
+  static getMunicipalitiesWithBarangays(province) {
+    const allData = this.getAllAddressData();
+    const provinceData = allData.find(p => p.province === province);
+    
+    if (provinceData && Array.isArray(provinceData.municipalities)) {
+      return provinceData.municipalities.map(m => ({
+        name: m.name,
+        barangays: m.barangays
+      }));
+    }
+    
+    return [];
+  }
 }
 
 module.exports = Address;

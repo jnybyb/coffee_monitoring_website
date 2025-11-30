@@ -2,7 +2,7 @@ const path = require('path');
 const Beneficiary = require('../models/Beneficiary');
 const BaseController = require('./baseController');
 const { beneficiaryUpload, uploadsDir } = require('../utils/upload');
-const { generateBenID } = require('../utils/generateBenID');
+const { generateBenID, generateMultipleBenIDs } = require('../utils/generateBenID');
 
 class BeneficiaryController {
   // Generate beneficiary ID
@@ -12,6 +12,22 @@ class BeneficiaryController {
       BaseController.sendSuccess(res, { beneficiaryId });
     } catch (error) {
       console.error('Error in generateBeneficiaryId controller:', error);
+      BaseController.handleError(res, error);
+    }
+  }
+
+  // Generate multiple beneficiary IDs
+  static async generateMultipleBeneficiaryIds(req, res) {
+    try {
+      const { count } = req.body;
+      if (!count || count < 1 || count > 1000) {
+        return BaseController.sendError(res, 'Count must be between 1 and 1000', 400);
+      }
+
+      const beneficiaryIds = await generateMultipleBenIDs(count);
+      BaseController.sendSuccess(res, { beneficiaryIds });
+    } catch (error) {
+      console.error('Error in generateMultipleBeneficiaryIds controller:', error);
       BaseController.handleError(res, error);
     }
   }

@@ -7,6 +7,9 @@ const router = express.Router();
 // Generate beneficiary ID
 router.get('/generate-id', BaseController.asyncHandler(BeneficiaryController.generateBeneficiaryId));
 
+// Generate multiple beneficiary IDs
+router.post('/generate-ids', BaseController.asyncHandler(BeneficiaryController.generateMultipleBeneficiaryIds));
+
 // List beneficiaries
 router.get('/', BaseController.asyncHandler(BeneficiaryController.listBeneficiaries));
 

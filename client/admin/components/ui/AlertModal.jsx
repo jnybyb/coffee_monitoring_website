@@ -13,7 +13,10 @@ const AlertModal = ({
   onCancel,
   autoClose = false,
   autoCloseDelay = 3000,
-  maxWidth = 320
+  maxWidth = 300,
+  borderRadius = 6,
+  buttonBorderRadius = 200,
+  hideButton = false
 }) => {
   React.useEffect(() => {
     if (isOpen && autoClose && !showCancel) {
@@ -71,11 +74,11 @@ const AlertModal = ({
       },
       info: {
         icon: '?',
-        headerColor: 'var(--pine-green)',
-        iconColor: 'var(--pine-green)',
+        headerColor: 'rgba(5, 80, 53, 1)',
+        iconColor: 'rgba(5, 80, 53, 0.80)',
         textColor: 'var(--black)',
-        buttonColor: 'var(--pine-green)',
-        buttonTextColor: 'var(--pine-green)'
+        buttonColor: 'rgba(5, 80, 53, 0.85)',
+        buttonTextColor: 'rgba(5, 80, 53, 1)'
       },
       logout: {
         icon: '✓',
@@ -84,6 +87,14 @@ const AlertModal = ({
         textColor: 'var(--black)',
         buttonColor: 'var(--dark-green)',
         buttonTextColor: 'var(--dark-green)'
+      },
+      delete: {
+        icon: '✕',
+        headerColor: 'var(--red)',
+        iconColor: 'var(--red)',
+        textColor: 'var(--black)',
+        buttonColor: 'var(--red)',
+        buttonTextColor: 'var(--red)'
       }
     };
     return configs[type] || configs.success;
@@ -113,7 +124,7 @@ const AlertModal = ({
       <div
         style={{
           backgroundColor: 'white',
-          borderRadius: '6px',
+          borderRadius: `${borderRadius}px`,
           maxWidth: `${maxWidth}px`,
           width: '100%',
           boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
@@ -155,7 +166,7 @@ const AlertModal = ({
             justifyContent: 'center',
             alignItems: 'center',
             color: 'white',
-            fontSize: '20px',
+            fontSize: '18px',
             fontWeight: 'bold'
           }}>
             {config.icon}
@@ -169,7 +180,7 @@ const AlertModal = ({
           <h3 style={{
             margin: '0 0 15px 0',
             color: config.textColor,
-            fontSize: '20px',
+            fontSize: '18px',
             fontWeight: 'bold',
             fontFamily: 'var(--font-main), Arial, sans-serif'
           }}>
@@ -178,9 +189,9 @@ const AlertModal = ({
 
           {message ? (
             <div style={{
-              marginBottom: '30px',
+              marginBottom: hideButton ? '0' : '30px',
               color: config.textColor,
-              fontSize: '14px',
+              fontSize: '12px',
               lineHeight: '1.5',
               textAlign: 'center',
               fontFamily: 'var(--font-main), Arial, sans-serif'
@@ -189,7 +200,7 @@ const AlertModal = ({
             </div>
           ) : null}
 
-          {showCancel && (
+          {!hideButton && (showCancel ? (
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -203,9 +214,9 @@ const AlertModal = ({
                   border: `2px solid ${config.buttonColor}`,
                   backgroundColor: 'white',
                   color: config.buttonTextColor,
-                  borderRadius: '25px',
+                  borderRadius: `${buttonBorderRadius}px`,
                   cursor: 'pointer',
-                  fontSize: '14px',
+                  fontSize: '12px',
                   fontWeight: '600',
                   transition: 'all 0.2s',
                   fontFamily: 'var(--font-main), Arial, sans-serif'
@@ -229,9 +240,9 @@ const AlertModal = ({
                   border: `2px solid ${config.buttonColor}`,
                   backgroundColor: 'white',
                   color: config.buttonTextColor,
-                  borderRadius: '25px',
+                  borderRadius: `${buttonBorderRadius}px`,
                   cursor: 'pointer',
-                  fontSize: '14px',
+                  fontSize: '12px',
                   fontWeight: '600',
                   transition: 'all 0.2s',
                   fontFamily: 'var(--font-main), Arial, sans-serif'
@@ -248,7 +259,34 @@ const AlertModal = ({
                 {confirmText}
               </button>
             </div>
-          )}
+          ) : (
+            <button
+              onClick={onConfirm || onClose}
+              style={{
+                width: '100%',
+                padding: '12px 20px',
+                border: `2px solid ${config.buttonColor}`,
+                backgroundColor: 'white',
+                color: config.buttonTextColor,
+                borderRadius: `${buttonBorderRadius}px`,
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '600',
+                transition: 'all 0.2s',
+                fontFamily: 'var(--font-main), Arial, sans-serif'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.backgroundColor = config.buttonColor;
+                e.target.style.color = 'white';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.backgroundColor = 'white';
+                e.target.style.color = config.buttonTextColor;
+              }}
+            >
+              {confirmText}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -271,3 +309,17 @@ const AlertModal = ({
 };
 
 export default AlertModal;
+
+// Convenience wrapper for delete success modal
+export const DeleteSuccessModal = ({ isOpen, onClose }) => (
+  <AlertModal 
+    isOpen={isOpen} 
+    onClose={onClose}
+    type="success"
+    title="Delete Successful"
+    message="Item has been successfully deleted."
+    autoClose={true}
+    autoCloseDelay={1500}
+    hideButton={true}
+  />
+);

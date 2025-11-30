@@ -22,6 +22,18 @@ class StatisticsController {
       res.status(500).json({ error: 'Failed to fetch chart data' });
     }
   }
+
+  // Get recent activities
+  static async getRecentActivities(req, res) {
+    try {
+      const limit = parseInt(req.query.limit) || 10;
+      const activities = await Statistics.getRecentActivities(limit);
+      res.json(activities);
+    } catch (error) {
+      console.error('Error fetching recent activities:', error);
+      res.status(500).json({ error: 'Failed to fetch recent activities' });
+    }
+  }
 }
 
 module.exports = StatisticsController;

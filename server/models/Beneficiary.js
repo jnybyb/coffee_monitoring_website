@@ -5,7 +5,16 @@ class Beneficiary {
   static async findAll() {
     const [rows] = await getPromisePool().query('SELECT * FROM beneficiaries ORDER BY created_at ASC');
     return rows.map(r => {
-      const birth = r.birth_date instanceof Date ? r.birth_date.toISOString().slice(0, 10) : r.birth_date;
+      // Format date correctly without timezone conversion
+      let birth = null;
+      if (r.birth_date instanceof Date) {
+        const year = r.birth_date.getFullYear();
+        const month = String(r.birth_date.getMonth() + 1).padStart(2, '0');
+        const day = String(r.birth_date.getDate()).padStart(2, '0');
+        birth = `${year}-${month}-${day}`;
+      } else if (r.birth_date) {
+        birth = r.birth_date;
+      }
       return {
         id: r.id,
         beneficiaryId: r.beneficiary_id,
@@ -31,7 +40,16 @@ class Beneficiary {
     if (!rows.length) return null;
     
     const r = rows[0];
-    const birth = r.birth_date instanceof Date ? r.birth_date.toISOString().slice(0, 10) : r.birth_date;
+    // Format date correctly without timezone conversion
+    let birth = null;
+    if (r.birth_date instanceof Date) {
+      const year = r.birth_date.getFullYear();
+      const month = String(r.birth_date.getMonth() + 1).padStart(2, '0');
+      const day = String(r.birth_date.getDate()).padStart(2, '0');
+      birth = `${year}-${month}-${day}`;
+    } else if (r.birth_date) {
+      birth = r.birth_date;
+    }
     return {
       id: r.id,
       beneficiaryId: r.beneficiary_id,
@@ -118,7 +136,16 @@ class Beneficiary {
     if (!rows.length) return null;
     
     const r = rows[0];
-    const birth = r.birth_date instanceof Date ? r.birth_date.toISOString().slice(0, 10) : r.birth_date;
+    // Format date correctly without timezone conversion
+    let birth = null;
+    if (r.birth_date instanceof Date) {
+      const year = r.birth_date.getFullYear();
+      const month = String(r.birth_date.getMonth() + 1).padStart(2, '0');
+      const day = String(r.birth_date.getDate()).padStart(2, '0');
+      birth = `${year}-${month}-${day}`;
+    } else if (r.birth_date) {
+      birth = r.birth_date;
+    }
     return {
       id: r.id,
       beneficiaryId: r.beneficiary_id,

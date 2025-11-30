@@ -9,4 +9,7 @@ router.get('/', StatisticsController.getDashboardStats);
 // Get chart data for line graph
 router.get('/chart-data', StatisticsController.getChartData);
 
+// Get recent activities
+router.get('/recent-activities', StatisticsController.getRecentActivities);
+
 module.exports = router;
