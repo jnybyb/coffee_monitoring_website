@@ -39,11 +39,13 @@ const Coffee_Beneficiaries = () => {
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const fileInputRef = React.createRef();
 
+  // Initial data fetch on component mount
   useEffect(() => {
     fetchBeneficiaries();
     fetchCropStatusRecords();
   }, []);
 
+  // Listen for beneficiary deletion events from DetailContainer to refresh list
   useEffect(() => {
     const handleBeneficiaryDeleted = () => {
       fetchBeneficiaries();
@@ -61,10 +63,9 @@ const Coffee_Beneficiaries = () => {
       setLoading(true);
       const data = await beneficiariesAPI.getAll();
       
-      // Fetch seedling data for all beneficiaries
       const seedlingsResponse = await seedlingsAPI.getAll();
       
-      // Process seedling data to get total received per beneficiary
+      // Aggregate total seedlings received per beneficiary for display
       const seedlingTotals = {};
       seedlingsResponse.forEach(seedling => {
         if (seedling.beneficiaryId) {
@@ -103,7 +104,6 @@ const Coffee_Beneficiaries = () => {
   };
 
   const handleImportClick = () => {
-    // Trigger file input click
     fileInputRef.current?.click();
   };
 
@@ -111,7 +111,7 @@ const Coffee_Beneficiaries = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
+    // Validate Excel file type before processing
     const validTypes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-excel'
@@ -125,31 +125,28 @@ const Coffee_Beneficiaries = () => {
     setUploadStage('uploading');
     
     try {
-      // Simulate uploading stage (can be removed if instant)
+      // Simulate uploading delay for user feedback
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Change to cleansing stage
       setUploadStage('cleansing');
       
-      // Upload file and get cleaned data
+      // Upload and clean data via API
       const response = await importAPI.uploadAndClean(file);
       
       console.log('Import API response:', response);
       console.log('Preview data:', response.previewData);
       console.log('Errors:', response.errors);
       
-      // Change to success stage
       setUploadStage('success');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Set cleaned data and errors
       setCleanedData(response.previewData || []);
       setImportErrors(response.errors || []);
       
       console.log('cleanedData state set to:', response.previewData);
       console.log('importErrors state set to:', response.errors);
       
-      // Close loading modal and show editor page
+      // Transition to editor page for data review and confirmation
       setUploading(false);
       setUploadStage('');
       setShowEditorPage(true);
@@ -159,7 +156,6 @@ const Coffee_Beneficiaries = () => {
       setUploadStage('');
       alert(error.message || 'Failed to process Excel file. Please try again.');
     } finally {
-      // Reset file input
       event.target.value = '';
     }
   };
@@ -173,21 +169,21 @@ const Coffee_Beneficiaries = () => {
       console.log('Crop surveys count:', data.cropSurveys?.length);
       console.log('First seedling data:', data.seedlings?.[0]);
       
-      // Prepare data for import (flatten the nested structure)
+      // Flatten nested structure (beneficiaries, seedlings, cropSurveys) into single rows for backend
       const flattenedData = data.beneficiaries.map((beneficiary, index) => {
         const seedling = data.seedlings[index] || {};
         const cropSurvey = data.cropSurveys[index] || {};
         
         const flatRow = {
           ...beneficiary,
-          // Add seedling data
+          // Merge seedling data into beneficiary row
           received: seedling.receivedSeedling || null,
           dateReceived: seedling.dateReceived || null,
           planted: seedling.plantedSeedling || null,
           plotId: seedling.plotId || null,
           plantingStartDate: seedling.plantingStartDate || null,
           plantingEndDate: seedling.plantingEndDate || null,
-          // Add crop survey data
+          // Merge crop survey data into beneficiary row
           surveyer: cropSurvey.surveyer || null,
           surveyDate: cropSurvey.surveyDate || null,
           aliveCrops: cropSurvey.aliveCrops || null,
@@ -213,16 +209,15 @@ const Coffee_Beneficiaries = () => {
       console.log('Flattened data count:', flattenedData.length);
       console.log('Sending to backend...');
       
-      // Send to backend for confirmation and import
+      // Send flattened data to backend for database import
       const result = await importAPI.confirmImport(flattenedData);
       
       console.log('Backend response:', result);
       
-      // Refresh beneficiaries list
       await fetchBeneficiaries();
     } catch (error) {
       console.error('Save error:', error);
-      throw error; // Re-throw error so ExcelEditorPage can handle it
+      throw error;
     }
   };
 
@@ -235,6 +230,7 @@ const Coffee_Beneficiaries = () => {
     let filename = 'export.csv';
     let headers = [];
 
+    // Prepare data based on selected table filter view
     if (selectedTableFilters === 'Coffee Seedling Record') {
       filename = 'seedling_records.csv';
       headers = ['Beneficiary ID', 'Full Name', 'Received', 'Date Received', 'Planted', 'Plot ID', 'Planting Start', 'Planting End'];
@@ -317,7 +313,7 @@ const Coffee_Beneficiaries = () => {
       });
     }
 
-    // Create CSV content
+    // Generate CSV content with proper escaping for commas in data
     const csvContent = [
       headers.join(','),
       ...dataToExport.map(row => 
@@ -329,7 +325,7 @@ const Coffee_Beneficiaries = () => {
       )
     ].join('\n');
 
-    // Create blob and download
+    // Create and trigger download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -347,6 +343,7 @@ const Coffee_Beneficiaries = () => {
     let title = '';
     let headers = [];
 
+    // Prepare data based on selected table filter view
     if (selectedTableFilters === 'Coffee Seedling Record') {
       title = 'Coffee Seedling Records';
       headers = ['Beneficiary ID', 'Full Name', 'Received', 'Date Received', 'Planted', 'Plot ID', 'Planting Start', 'Planting End'];
@@ -428,7 +425,7 @@ const Coffee_Beneficiaries = () => {
       });
     }
 
-    // Store data for PDF generation in sessionStorage
+    // Store data in sessionStorage for PDF generation page
     const pdfData = {
       title,
       headers,
@@ -438,19 +435,20 @@ const Coffee_Beneficiaries = () => {
     
     sessionStorage.setItem('pdfReportData', JSON.stringify(pdfData));
     
-    // Dispatch custom event to notify that PDF data is ready
+    // Notify Reports page that PDF data is ready
     window.dispatchEvent(new CustomEvent('openPDFReport', { detail: pdfData }));
     
     setIsExportDropdownOpen(false);
     
-    // Navigate to Reports page
     navigate('/reports');
   };
 
+  // Filter beneficiaries by search term across ID, name, and address (excluding 'Unknown' values)
   const filteredBeneficiaries = beneficiaries.filter(ben => {
     const searchLower = searchTerm.toLowerCase();
     const fullName = `${ben.firstName} ${ben.middleName || ''} ${ben.lastName}`.toLowerCase();
     
+    // Filter out 'Unknown' values from address parts for cleaner search
     const addressParts = [
       ben.purok,
       ben.barangay,
@@ -468,10 +466,11 @@ const Coffee_Beneficiaries = () => {
     return matchesSearch;
   });
 
+  // Filter seedlings by search term, resolving beneficiary name from ID
   const filteredSeedlings = seedlings.filter(seedling => {
     const searchLower = searchTerm.toLowerCase();
     
-    // Find beneficiary for this seedling
+    // Resolve beneficiary name for seedling record search
     const beneficiary = beneficiaries.find(b => b.beneficiaryId === seedling.beneficiaryId);
     const fullName = beneficiary 
       ? `${beneficiary.firstName} ${beneficiary.middleName || ''} ${beneficiary.lastName}`.toLowerCase()
@@ -486,10 +485,11 @@ const Coffee_Beneficiaries = () => {
     return matchesSearch;
   });
 
+  // Filter crop status records by search term, resolving beneficiary name from ID
   const filteredCropStatus = cropStatusRecords.filter(record => {
     const searchLower = searchTerm.toLowerCase();
     
-    // Find beneficiary for this crop status record
+    // Resolve beneficiary name for crop status search
     const beneficiary = beneficiaries.find(b => b.beneficiaryId === record.beneficiaryId);
     const fullName = beneficiary 
       ? `${beneficiary.firstName} ${beneficiary.middleName || ''} ${beneficiary.lastName}`.toLowerCase()
@@ -504,8 +504,7 @@ const Coffee_Beneficiaries = () => {
     return matchesSearch;
   });
 
-
-
+  // Calculate total records based on active filter view
   const totalRecords = selectedTableFilters === 'Coffee Seedling Record' 
     ? filteredSeedlings.length
     : selectedTableFilters === 'Crop Survey Status'
@@ -527,11 +526,12 @@ const Coffee_Beneficiaries = () => {
     currentPage * pageSize
   );
 
+  // Reset to first page when search term changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
 
-  // If showing editor page, render it instead
+  // Render Excel editor page if import data is loaded
   if (showEditorPage) {
     return (
       <ExcelEditorPage
@@ -949,7 +949,7 @@ const Coffee_Beneficiaries = () => {
                       >
                         {selectedTableFilters === 'Coffee Seedling Record' ? (
                           paginatedSeedlings.map((s) => {
-                            // Find beneficiary for this seedling
+                            // Resolve beneficiary data for seedling row display and click navigation
                             const beneficiary = beneficiaries.find(b => b.beneficiaryId === s.beneficiaryId);
                             
                             return (
@@ -1017,6 +1017,7 @@ const Coffee_Beneficiaries = () => {
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center' }}>{s.received?.toLocaleString() || 0}</div>
                               <div style={{ display: 'flex', alignItems: 'center' }}>
+                                {/* Format ISO date to MM/DD/YYYY for display */}
                                 {s.dateReceived ? (() => {
                                   const dateStr = s.dateReceived.toString().split('T')[0];
                                   const [year, month, day] = dateStr.split('-');
@@ -1026,6 +1027,7 @@ const Coffee_Beneficiaries = () => {
                               <div style={{ display: 'flex', alignItems: 'center' }}>{s.planted?.toLocaleString() || 0}</div>
                               <div style={{ display: 'flex', alignItems: 'center' }}>{s.plotId || '-'}</div>
                               <div style={{ display: 'flex', alignItems: 'center' }}>
+                                {/* Format planting dates to MM/DD/YYYY */}
                                 {s.dateOfPlantingStart ? (() => {
                                   const dateStr = s.dateOfPlantingStart.toString().split('T')[0];
                                   const [year, month, day] = dateStr.split('-');
@@ -1044,7 +1046,7 @@ const Coffee_Beneficiaries = () => {
                           })
                         ) : selectedTableFilters === 'Crop Survey Status' ? (
                           paginatedCropStatus.map((cs) => {
-                            // Find beneficiary for this crop status record
+                            // Resolve beneficiary data for crop status row display and click navigation
                             const beneficiary = beneficiaries.find(b => b.beneficiaryId === cs.beneficiaryId);
                             
                             return (
@@ -1111,6 +1113,7 @@ const Coffee_Beneficiaries = () => {
                                 </span>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center' }}>
+                                {/* Format survey date to MM/DD/YYYY */}
                                 {cs.surveyDate ? (() => {
                                   const dateStr = cs.surveyDate.toString().split('T')[0];
                                   const [year, month, day] = dateStr.split('-');
@@ -1183,6 +1186,7 @@ const Coffee_Beneficiaries = () => {
                                   <span>{`${b.firstName} ${b.middleName || ''} ${b.lastName}`.trim()}</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center' }}>
+                                  {/* Build address string excluding 'Unknown' values */}
                                   {(() => {
                                     const parts = [
                                       b.purok,
@@ -1195,6 +1199,7 @@ const Coffee_Beneficiaries = () => {
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center' }}>{b.gender || '-'}</div>
                                 <div style={{ display: 'flex', alignItems: 'center' }}>
+                                  {/* Format birth date to MM/DD/YYYY */}
                                   {b.birthDate ? (() => {
                                     const dateStr = b.birthDate.split('T')[0];
                                     const [year, month, day] = dateStr.split('-');
@@ -1233,6 +1238,7 @@ const Coffee_Beneficiaries = () => {
                                   <span>{`${b.firstName} ${b.middleName || ''} ${b.lastName}`}</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center' }}>
+                                  {/* Build address string excluding 'Unknown' values */}
                                   {(() => {
                                     const parts = [
                                       b.purok,
@@ -1246,6 +1252,7 @@ const Coffee_Beneficiaries = () => {
                                 </div>
                                 <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</div>
                                 <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  {/* Display aggregated seedling total with thousand separator */}
                                   {seedlingData[b.beneficiaryId] ? seedlingData[b.beneficiaryId].toLocaleString() : 0}
                                 </div>
                               </>

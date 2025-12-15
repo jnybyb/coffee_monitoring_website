@@ -7,6 +7,7 @@ import RecentActivities from './RecentActivities';
 import { statisticsAPI } from '../../../services/api';
 
 const Dashboard = ({ active }) => {
+  // State for dashboard statistics
   const [stats, setStats] = useState({
     totalBeneficiaries: 0,
     totalSeedsDistributed: 0,
@@ -21,7 +22,13 @@ const Dashboard = ({ active }) => {
     try {
       setError(null);
       const data = await statisticsAPI.getDashboardStats();
-      setStats(data);
+      // Ensure all values are numbers for proper formatting
+      setStats({
+        totalBeneficiaries: Number(data.totalBeneficiaries) || 0,
+        totalSeedsDistributed: Number(data.totalSeedsDistributed) || 0,
+        totalAlive: Number(data.totalAlive) || 0,
+        totalDead: Number(data.totalDead) || 0
+      });
     } catch (err) {
       console.error('Error fetching dashboard stats:', err);
       setError('Failed to load dashboard statistics');
@@ -35,12 +42,13 @@ const Dashboard = ({ active }) => {
     fetchStats();
   }, []);
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 30 seconds to keep data current
   useEffect(() => {
     const intervalId = setInterval(() => {
       fetchStats();
     }, 30000); // 30 seconds
 
+    // Cleanup interval on component unmount
     return () => clearInterval(intervalId);
   }, []);
 
@@ -51,13 +59,14 @@ const Dashboard = ({ active }) => {
     }
   }, [active]);
 
+  // Define metric cards configuration
   const metrics = [
     {
       icon: PiUsersFill,
       title: "Total Beneficiaries",
       value: stats.totalBeneficiaries,
       color: "var(--olive-green)",
-      format: false
+      format: true
     },
     {
       icon: GiSeedling,
@@ -200,6 +209,7 @@ const Dashboard = ({ active }) => {
                   fontWeight: 'bold', 
                   color: metric.color
                 }}>
+                  {/* Format numbers with thousand separators if specified */}
                   {metric.format ? metric.value.toLocaleString() : metric.value}
                 </p>
               </div>
@@ -207,7 +217,7 @@ const Dashboard = ({ active }) => {
           })}
         </div>
         
-        {/* Charts and Activities Section */}
+        {/* Charts and Activities Section - 2/3 for chart, 1/3 for activities */}
         <div style={{ 
           display: 'grid',
           gridTemplateColumns: '2fr 1fr',

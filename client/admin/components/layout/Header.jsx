@@ -11,11 +11,13 @@ const Header = () => {
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
   const iconRef = useRef(null);
 
+  // Clear authentication data and redirect to login page
   const handleLogout = () => {
     try {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('auth_user');
     } catch {}
+    // Replace history to prevent back navigation to authenticated pages
     navigate('/login', { replace: true });
   };
 
@@ -93,13 +95,12 @@ const Header = () => {
     transform: 'scale(1)', // Ensure initial scale is set
   };
 
-  // Handle icon click with immediate scale reset
+  // Handle logout icon click with immediate scale reset to prevent visual stutter
+  // when modal opens (avoids icon remaining scaled during modal transition)
   const handleIconClick = () => {
-    // Immediately reset the icon scale to 1
     if (iconRef.current) {
       iconRef.current.style.transform = 'scale(1)';
     }
-    // Open the confirmation modal
     setConfirmLogoutOpen(true);
   };
 

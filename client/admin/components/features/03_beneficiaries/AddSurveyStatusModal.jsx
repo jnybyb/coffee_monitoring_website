@@ -114,7 +114,7 @@ const FIELD_STYLES = {
   }
 };
 
-// Helper function to resolve image preview URLs
+// Resolve image preview URLs from various sources (File objects, HTTP URLs, or local paths)
 const resolvePreviewUrl = (p) => {
   if (!p) return '';
   if (p instanceof File) return URL.createObjectURL(p);
@@ -126,7 +126,7 @@ const resolvePreviewUrl = (p) => {
   return '';
 };
 
-// Helper function to construct full name
+// Construct full name from beneficiary object, handling both pre-formatted and component names
 const getFullName = (beneficiary) => {
   if (beneficiary.fullName) return beneficiary.fullName;
   const firstName = beneficiary.firstName || '';
@@ -137,7 +137,7 @@ const getFullName = (beneficiary) => {
 
 const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = false, selectedBeneficiary = null }) => {
   const [formData, setFormData] = useState({
-    id: '', // Add id field for edit operations
+    id: '', // Required for edit operations to identify the record
     surveyDate: '',
     surveyer: '',
     beneficiaryId: '',
@@ -159,13 +159,14 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
   const [showSaveError, setShowSaveError] = useState(false);
   const [saveErrorMessage, setSaveErrorMessage] = useState('');
 
-  // Fetch plots when beneficiary changes
+  // Fetch and filter plots whenever beneficiary changes to populate Plot ID dropdown
   useEffect(() => {
     const fetchPlots = async () => {
       if (formData.beneficiaryId) {
         try {
           setPlotsLoading(true);
           const allPlots = await farmPlotsAPI.getAll();
+          // Filter to show only plots belonging to selected beneficiary
           const beneficiaryPlots = allPlots.filter(
             plot => plot.beneficiaryId === formData.beneficiaryId
           );
@@ -184,7 +185,7 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
     fetchPlots();
   }, [formData.beneficiaryId]);
 
-  // Fetch beneficiaries from database
+  // Fetch all beneficiaries from database when modal opens for dropdown population
   useEffect(() => {
     const fetchBeneficiaries = async () => {
       if (!isOpen) return;
@@ -221,15 +222,7 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
     color: value ? 'var(--pagination-gray)' : 'var(--text-gray)'
   });
 
-  const getFullName = (beneficiary) => {
-    if (beneficiary.fullName) return beneficiary.fullName;
-    const firstName = beneficiary.firstName || '';
-    const middleName = beneficiary.middleName || '';
-    const lastName = beneficiary.lastName || '';
-    return `${firstName} ${middleName} ${lastName}`.trim().replace(/\s+/g, ' ');
-  };
-
-  // Load record data when editing OR pre-populate with selectedBeneficiary
+  // Load record data for editing or pre-populate with selectedBeneficiary for adding
   useEffect(() => {
     if (isEdit && record && isOpen) {
       setFormData({
@@ -245,7 +238,7 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
         pictures: record.pictures || []
       });
       
-      // Handle existing pictures properly for edit mode
+      // Preserve existing pictures for edit mode (convert to displayable format)
       if (record.pictures && Array.isArray(record.pictures) && record.pictures.length > 0) {
         setSelectedFiles(record.pictures);
         setFormData(prev => ({ ...prev, pictures: record.pictures }));
@@ -253,14 +246,13 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
         setSelectedFiles([]);
       }
     } else if (!isEdit && isOpen) {
-      // Check if we have a selectedBeneficiary to pre-populate
+      // Pre-populate beneficiary data when opened from specific beneficiary context
       const initialBeneficiaryId = selectedBeneficiary?.beneficiaryId || '';
       const initialBeneficiaryName = selectedBeneficiary 
         ? `${selectedBeneficiary.firstName} ${selectedBeneficiary.middleName || ''} ${selectedBeneficiary.lastName}`.trim().replace(/\s+/g, ' ')
         : '';
       const initialBeneficiaryPicture = selectedBeneficiary?.picture || '';
       
-      // Reset form when opening in add mode
       setFormData({
         id: '',
         surveyDate: '',
@@ -277,7 +269,6 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
       setErrors({});
     }
     
-    // Reset success/error states when modal opens
     if (isOpen) {
       setShowSaveSuccess(false);
       setShowSaveError(false);
@@ -299,6 +290,7 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    // Sync beneficiary ID and picture with name selection for database consistency
     if (name === 'beneficiaryName') {
       const beneficiary = beneficiaries.find(b => getFullName(b) === value);
       setFormData(prev => ({
@@ -318,7 +310,7 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
     if (!files.length) return;
     
     setSelectedFiles(prev => {
-      // Filter out any existing files that are not File objects (i.e., existing image URLs)
+      // Preserve existing images (URLs) and append new files, limit to 10 total
       const existingImages = prev.filter(item => !(item instanceof File));
       const newFiles = [...existingImages, ...files];
       return newFiles.slice(0, 10);
@@ -330,6 +322,7 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
       return { ...prev, pictures: newFiles.slice(0, 10) };
     });
     
+    // Reset file input to allow re-selecting the same file
     try { e.target.value = null; } catch (_) {}
   };
 
@@ -350,39 +343,33 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
         deadCrops: parseInt(formData.deadCrops || 0) 
       };
       
-      // Handle pictures properly for edit mode
+      // Separate existing images (filenames) from new File objects for proper server handling
       if (isEdit) {
-        // For edit mode, we need to separate existing images (filenames) from new files
+        // For edit mode, send existing images as filenames and new uploads as File objects
         const existingImages = selectedFiles.filter(item => typeof item === 'string' && !(item instanceof File));
         const newFiles = selectedFiles.filter(item => item instanceof File);
         
-        // Send existing image filenames as a separate field and new files as pictures
         submitData.existingPictures = existingImages;
         submitData.pictures = newFiles;
       } else {
-        // For add mode, send selected files
         submitData.pictures = selectedFiles;
       }
       
-      // Show loading modal
       setShowSaveLoading(true);
       
-      // Save to database
       if (isEdit) {
         await cropStatusAPI.update(formData.id, submitData);
       } else {
         await cropStatusAPI.create(submitData);
       }
       
-      // Call parent onSubmit if provided (for additional actions like refreshing data)
       if (onSubmit) {
         await onSubmit(submitData);
       }
       
-      // Hide loading modal after a short delay
+      // Execute sequential modal display: loading (1s) → success
       setTimeout(() => {
         setShowSaveLoading(false);
-        // Show success modal
         setShowSaveSuccess(true);
       }, 1000);
       

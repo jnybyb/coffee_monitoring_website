@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { FaRegIdCard } from 'react-icons/fa';
 import { FaLocationDot } from 'react-icons/fa6';
-import { PiTrashLight } from 'react-icons/pi';
 import EditFarmPlotModal from './EditFarmPlotModal';
 import { LuLandPlot } from 'react-icons/lu';
 import { ActionButton } from '../../ui/BeneficiaryButtons';
@@ -24,13 +23,13 @@ const modalStyle = {
 };
 
 const formStyle = {
-  background: 'white',
+  background: 'var(--white)',
   borderRadius: 5,
   padding: 0,
   minWidth: 450,
   maxWidth: 500,
   maxHeight: '90vh',
-  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+  boxShadow: '0 8px 32px var(--shadow-dark)',
   display: 'flex',
   flexDirection: 'column',
   position: 'relative',
@@ -89,13 +88,13 @@ const profileImageStyle = {
   width: 45,
   height: 45,
   borderRadius: '50%',
-  border: '2px solid #2d7c4a',
+  border: '2px solid var(--dark-green)',
   objectFit: 'cover',
-  backgroundColor: '#f1f3f5',
+  backgroundColor: 'var(--light-gray)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  color: '#6c757d',
+  color: 'var(--placeholder-text)',
   fontSize: 14,
   fontWeight: 'bold',
 };
@@ -107,13 +106,13 @@ const profileInfoStyle = {
 const beneficiaryNameStyle = {
   fontSize: 12,
   fontWeight: 600,
-  color: '#2d7c4a',
+  color: 'var(--dark-green)',
   marginBottom: 4,
 };
 
 const beneficiaryIdStyle = {
   fontSize: 10,
-  color: '#6c757d',
+  color: 'var(--placeholder-text)',
   marginBottom: 3,
   fontWeight: 500,
   display: 'flex',
@@ -123,69 +122,11 @@ const beneficiaryIdStyle = {
 
 const addressStyle = {
   fontSize: 10,
-  color: '#495057',
+  color: 'var(--pagination-gray)',
   lineHeight: 1.4,
   display: 'flex',
   alignItems: 'flex-start',
   gap: 4,
-};
-
-const fieldStyle = {
-  marginBottom: 16,
-};
-
-const labelStyle = {
-  fontWeight: 600,
-  fontSize: 15,
-  marginBottom: 8,
-  display: 'block',
-  color: '#2c5530',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-};
-
-const valueStyle = {
-  fontSize: 17,
-  color: '#343a40',
-  fontWeight: 500,
-  padding: '12px 16px',
-  backgroundColor: '#f8f9fa',
-  borderRadius: 8,
-  border: '1px solid #e9ecef',
-  minHeight: '24px',
-};
-
-const formBodyStyle = {
-  padding: '1rem',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 12,
-};
-
-const labelTitleStyle = {
-  fontSize: 12,
-  fontWeight: 500,
-  color: 'var(--dark-text)',
-  marginBottom: 2,
-};
-
-const valueDisplayStyle = {
-  fontSize: 12,
-  fontWeight: 600,
-  color: 'var(--dark-green)',
-  padding: '6px 10px',
-  backgroundColor: 'rgba(0, 0, 0, 0.035)',
-  borderRadius: 4,
-  border: '1px solid var(--border-gray)',
-};
-
-const twoColRowStyle = {
-  display: 'flex',
-  gap: 6,
-};
-
-const twoColColStyle = {
-  flex: 1,
 };
 
 const locationSectionStyle = {
@@ -195,13 +136,13 @@ const locationSectionStyle = {
 const locationTitleStyle = {
   fontSize: 12,
   fontWeight: 600,
-  color: '#2c5530',
+  color: 'var(--dark-green)',
   marginBottom: 6,
 };
 
 const locationInfoStyle = {
   fontSize: 12,
-  color: '#495057',
+  color: 'var(--pagination-gray)',
   lineHeight: 1.4,
 };
 
@@ -224,7 +165,7 @@ const buttonRowStyle = {
   borderTop: '1px solid rgba(0, 0, 0, 0.035)',
 };
 
-// Helper function to get initials from name
+// Extract initials from beneficiary name for profile placeholder (e.g., "John Doe" → "JD")
 const getInitials = (name) => {
   if (!name) return '??';
   return name.split(' ')
@@ -234,13 +175,11 @@ const getInitials = (name) => {
     .slice(0, 2);
 };
 
-function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex, otherPlots = [], beneficiaries = [], onDeleteSuccess = null }) {
+function ViewFarmPlotModal({ isOpen, onClose, plot, otherPlots = [], beneficiaries = [], onDeleteSuccess = null }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentPlot, setCurrentPlot] = useState(plot);
-  const [currentPlotIndex, setCurrentPlotIndex] = useState(plotIndex);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteLoadingModal, setShowDeleteLoadingModal] = useState(false);
   const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
@@ -250,12 +189,19 @@ function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex,
   React.useEffect(() => {
     if (plot) {
       setCurrentPlot(plot);
-      setCurrentPlotIndex(plotIndex);
     }
-  }, [plot, plotIndex]);
+  }, [plot]);
 
   if (!isOpen || !currentPlot) return null;
 
+  const formBodyStyle = {
+    padding: '1rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  };
+
+  // Convert decimal coordinates to DMS format for display in table
   const toDMS = (decimal, isLat) => {
     if (decimal === null || decimal === undefined || isNaN(decimal)) return '';
     const abs = Math.abs(Number(decimal));
@@ -274,14 +220,11 @@ function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex,
 
   const handleEditSubmit = async (updatedPlotData) => {
     try {
-      if (onEdit) {
-        await onEdit(updatedPlotData, currentPlotIndex);
-      }
+      await updatedPlotData;
       setShowEditModal(false);
-      onClose(); // Close the view modal after successful edit
+      onClose();
     } catch (error) {
       console.error('Error updating plot:', error);
-      // Error handling is done in the parent component
     }
   };
 
@@ -289,11 +232,9 @@ function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex,
     setShowEditModal(false);
   };
 
-  // Handle clicking on another plot card
+  // Switch to different plot when user clicks on another plot card
   const handlePlotCardClick = (selectedPlot) => {
-    const plotIdx = otherPlots.findIndex(p => p.id === selectedPlot.id);
     setCurrentPlot(selectedPlot);
-    setCurrentPlotIndex(plotIdx !== -1 ? plotIdx : 0);
   };
 
   // Handle image click to open preview
@@ -304,41 +245,33 @@ function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex,
     }
   };
 
-  // Handle close image preview
   const handleCloseImagePreview = () => {
     setShowImagePreview(false);
   };
 
-  // Handle delete confirmation
+  // Execute delete with sequential modal display: loading (1s) → success (1.2s) → refresh
   const handleDeleteConfirm = async () => {
     try {
       setShowDeleteConfirm(false);
       setShowDeleteLoadingModal(true);
       
-      // Call the delete API
       const plotId = currentPlot.id || currentPlot.plotId;
       const response = await farmPlotsAPI.delete(plotId);
       
       if (response && response.success) {
-        // Show loading modal for 1 second, then show success
+        // Display loading for 1s, then success for 1.2s before closing and refreshing data
         setTimeout(() => {
           setShowDeleteLoadingModal(false);
           setShowDeleteSuccessModal(true);
           
-          // After success modal auto-closes, close the main modal and refresh data
           setTimeout(() => {
             setShowDeleteSuccessModal(false);
-            if (onDelete) {
-              onDelete(currentPlot, currentPlotIndex);
-            }
-            // Call the refresh callback to update MapDetails
             if (onDeleteSuccess) {
               onDeleteSuccess();
             }
-            setIsDeleting(false);
             onClose();
-          }, 1200); // Give time for success modal to display
-        }, 1000); // Show loading modal for 1 second
+          }, 1200);
+        }, 1000);
       } else {
         throw new Error('Delete operation failed');
       }
@@ -347,11 +280,9 @@ function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex,
       setShowDeleteLoadingModal(false);
       setDeleteError(error.message || 'Failed to delete the plot. Please try again.');
       setShowDeleteErrorModal(true);
-      setIsDeleting(false);
     }
   };
 
-  // Handle opening delete confirmation
   const handleDeleteClick = () => {
     setShowDeleteConfirm(true);
   };
@@ -439,19 +370,19 @@ function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex,
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
-                        <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, color: '#6c757d', borderBottom: '1px solid #e9ecef' }}>Point</th>
-                        <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, color: '#6c757d', borderBottom: '1px solid #e9ecef' }}>Latitude (DMS)</th>
-                        <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, color: '#6c757d', borderBottom: '1px solid #e9ecef' }}>Longitude (DMS)</th>
-                        <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, color: '#6c757d', borderBottom: '1px solid #e9ecef' }}>Elevation (m)</th>
+                        <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, color: 'var(--placeholder-text)', borderBottom: '1px solid var(--border-gray)' }}>Point</th>
+                        <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, color: 'var(--placeholder-text)', borderBottom: '1px solid var(--border-gray)' }}>Latitude (DMS)</th>
+                        <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, color: 'var(--placeholder-text)', borderBottom: '1px solid var(--border-gray)' }}>Longitude (DMS)</th>
+                        <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, color: 'var(--placeholder-text)', borderBottom: '1px solid var(--border-gray)' }}>Elevation (m)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {currentPlot.coordinates.map((c, i) => (
                         <tr key={i}>
-                          <td style={{ padding: '6px 8px', fontSize: 10, borderBottom: '1px solid #f1f3f5' }}>{i + 1}</td>
-                          <td style={{ padding: '6px 8px', fontSize: 10, borderBottom: '1px solid #f1f3f5' }}>{toDMS(c.lat, true)}</td>
-                          <td style={{ padding: '6px 8px', fontSize: 10, borderBottom: '1px solid #f1f3f5' }}>{toDMS(c.lng, false)}</td>
-                          <td style={{ padding: '6px 8px', fontSize: 10, borderBottom: '1px solid #f1f3f5' }}>{c.elevation || 'N/A'}</td>
+                          <td style={{ padding: '6px 8px', fontSize: 10, borderBottom: '1px solid var(--light-gray)' }}>{i + 1}</td>
+                          <td style={{ padding: '6px 8px', fontSize: 10, borderBottom: '1px solid var(--light-gray)' }}>{toDMS(c.lat, true)}</td>
+                          <td style={{ padding: '6px 8px', fontSize: 10, borderBottom: '1px solid var(--light-gray)' }}>{toDMS(c.lng, false)}</td>
+                          <td style={{ padding: '6px 8px', fontSize: 10, borderBottom: '1px solid var(--light-gray)' }}>{c.elevation || 'N/A'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -467,6 +398,7 @@ function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex,
           <div style={locationSectionStyle}>
             <div style={locationTitleStyle}>Other Farm Plots</div>
             <div style={locationInfoStyle}>
+              {/* Filter to show only plots from same beneficiary, excluding current plot */}
               {Array.isArray(otherPlots) && otherPlots.filter(p => (p.beneficiaryId || p.beneficiary_id) === (currentPlot.beneficiaryId || currentPlot.beneficiary_id) && (p.id !== currentPlot.id)).length > 0 ? (
                 <div style={{ 
                   display: 'grid', 
@@ -477,7 +409,6 @@ function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex,
                   {otherPlots
                     .filter(p => (p.beneficiaryId || p.beneficiary_id) === (currentPlot.beneficiaryId || currentPlot.beneficiary_id) && (p.id !== currentPlot.id))
                     .map((p, i) => {
-                      // Get plot ID
                       const plotId = p.plotId || p.id || 'N/A';
                       
                       return (
@@ -490,21 +421,21 @@ function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex,
                             alignItems: 'center',
                             gap: '10px',
                             padding: '16px 12px',
-                            backgroundColor: 'white',
+                            backgroundColor: 'var(--white)',
                             borderRadius: '6px',
-                            border: '1px solid #e0e0e0',
+                            border: '1px solid var(--light-gray)',
                             transition: 'all 0.2s ease',
                             cursor: 'pointer',
                             minHeight: '110px',
                             justifyContent: 'center'
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = '#2d7c4a';
+                            e.currentTarget.style.borderColor = 'var(--dark-green)';
                             e.currentTarget.style.transform = 'translateY(-2px)';
                             e.currentTarget.style.boxShadow = '0 4px 12px rgba(45, 124, 74, 0.15)';
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = '#e0e0e0';
+                            e.currentTarget.style.borderColor = 'var(--light-gray)';
                             e.currentTarget.style.transform = 'translateY(0)';
                             e.currentTarget.style.boxShadow = 'none';
                           }}
@@ -517,14 +448,14 @@ function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex,
                             height: '48px',
                             borderRadius: '6px',
                             backgroundColor: 'rgba(45, 124, 74, 0.1)',
-                            color: '#2d7c4a'
+                            color: 'var(--dark-green)'
                           }}>
                             <LuLandPlot size={28} strokeWidth={1.5} />
                           </div>
                           <div style={{
                             fontSize: '10px',
                             fontWeight: '600',
-                            color: '#333',
+                            color: 'var(--dark-text)',
                             textAlign: 'center',
                             wordBreak: 'break-word',
                             width: '100%'
@@ -551,7 +482,7 @@ function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex,
               fontSize="12px"
               padding="10px 18px"
               borderRadius="5px"
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#044028'}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--dark-green)'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--dark-green)'}
             >
               Edit Plot
@@ -565,7 +496,7 @@ function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex,
               padding="10px 18px"
               borderRadius="5px"
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#d32f2f';
+                e.currentTarget.style.backgroundColor = 'var(--danger-red)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'var(--danger-red)';
@@ -584,7 +515,6 @@ function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex,
         onClose={handleCloseEditModal}
         onSubmit={handleEditSubmit}
         plot={currentPlot}
-        plotIndex={currentPlotIndex}
         beneficiaries={beneficiaries}
       />
 
@@ -659,7 +589,7 @@ function ViewFarmPlotModal({ isOpen, onClose, plot, onEdit, onDelete, plotIndex,
               width: 40,
               height: 40,
               fontSize: 24,
-              color: '#333',
+              color: 'var(--dark-text)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',

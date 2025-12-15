@@ -191,7 +191,7 @@ const formBodyStyle = {
   gap: 12,
 };
 
-// Helper function to convert DMS to Decimal Degrees
+// Convert DMS (Degrees Minutes Seconds) format to Decimal Degrees
 const dmsToDecimal = (dmsString) => {
   if (!dmsString) return null;
   
@@ -216,7 +216,7 @@ const dmsToDecimal = (dmsString) => {
   return decimal;
 };
 
-// Helper function to convert Decimal Degrees to DMS format
+// Convert Decimal Degrees to DMS (Degrees Minutes Seconds) format for display
 const decimalToDMS = (decimal, isLatitude = true) => {
   if (decimal === null || decimal === undefined || isNaN(decimal)) return '';
   
@@ -226,7 +226,7 @@ const decimalToDMS = (decimal, isLatitude = true) => {
   const minutes = Math.floor(minutesDecimal);
   const seconds = (minutesDecimal - minutes) * 60;
   
-  // Determine direction
+  // Apply direction based on hemisphere
   let direction = '';
   if (isLatitude) {
     direction = decimal >= 0 ? 'N' : 'S';
@@ -237,7 +237,7 @@ const decimalToDMS = (decimal, isLatitude = true) => {
   return `${degrees}°${minutes}'${seconds.toFixed(1)}"${direction}`;
 };
 
-// Helper function to detect coordinate format
+// Detect whether coordinate string is in DMS or decimal format
 const detectCoordinateFormat = (coordString) => {
   if (!coordString) return 'decimal';
   
@@ -255,7 +255,7 @@ const detectCoordinateFormat = (coordString) => {
   return 'unknown';
 };
 
-// Helper to format address safely without showing "undefined"
+// Format beneficiary address for display, handling missing fields gracefully
 const formatSelectedAddress = (beneficiary) => {
   if (!beneficiary) return '';
   if (beneficiary.address) return beneficiary.address;
@@ -283,13 +283,13 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries }) {
   // Find selected beneficiary object
   const selected = beneficiaries?.find(b => b.beneficiaryId === selectedId || b.id === selectedId) || {};
 
-  // Initialize form data when plot changes
+  // Initialize form with plot data, converting decimal coordinates to DMS for user-friendly editing
   useEffect(() => {
     if (plot && isOpen) {
       const beneficiaryId = plot.beneficiaryId || '';
       setSelectedId(beneficiaryId);
       
-      // Initialize coordinates from existing plot data in DMS format
+      // Convert decimal coordinates to DMS format for editing
       let plotCoordinates;
       if (plot.coordinates && Array.isArray(plot.coordinates)) {
         plotCoordinates = plot.coordinates.map(coord => ({
@@ -298,7 +298,7 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries }) {
           elevation: coord.elevation ? String(coord.elevation) : ''
         }));
         
-        // Ensure minimum 4 coordinates
+        // Ensure minimum 4 coordinates for plot boundary
         while (plotCoordinates.length < 4) {
           plotCoordinates.push({ lat: '', lng: '', elevation: '' });
         }
@@ -314,7 +314,7 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries }) {
         setCoordinates(plotCoordinates);
       }
       
-      // Store initial form data for change detection
+      // Store initial state for change detection
       setInitialFormData({
         selectedId: beneficiaryId,
         coordinates: JSON.parse(JSON.stringify(plotCoordinates))
@@ -362,24 +362,23 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries }) {
     checkForChanges(selectedId, updated);
   };
 
-  // Helper function to check for changes
+  // Track form changes to enable/disable save button based on modifications
   const checkForChanges = (currentSelectedId, currentCoordinates) => {
     if (!initialFormData) {
       setHasChanges(false);
       return;
     }
 
-    // Check if beneficiary changed
     if (currentSelectedId !== initialFormData.selectedId) {
       setHasChanges(true);
       return;
     }
 
-    // Check if coordinates changed
     const coordsChanged = JSON.stringify(currentCoordinates) !== JSON.stringify(initialFormData.coordinates);
     setHasChanges(coordsChanged);
   };
 
+  // Validate and convert coordinates from DMS or decimal format to decimal for database storage
   const validateAndConvertCoordinates = (coordinates) => {
     const validCoordinates = [];
     
@@ -455,18 +454,14 @@ function EditFarmPlotModal({ isOpen, onClose, onSubmit, plot, beneficiaries }) {
       // Call the onSubmit function
       await onSubmit({
         id: plot.id,
-        plotNumber: plot.plotNumber,
         beneficiaryId: selected.beneficiaryId || selected.id,
-        fullName: selected.fullName || selected.name,
-        address: selected.address,
-        coordinates: convertedCoordinates,
-        color: plot.color,
+        coordinates: convertedCoordinates
       });
       
       // Close loading modal first
       setIsSubmitting(false);
       
-      // Add a small delay before showing success modal to ensure loading modal fully closes
+      // 100ms delay ensures loading modal closes completely before showing success modal
       setTimeout(() => {
         setShowSuccessModal(true);
       }, 100);

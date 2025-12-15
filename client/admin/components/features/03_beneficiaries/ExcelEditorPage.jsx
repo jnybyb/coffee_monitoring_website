@@ -33,14 +33,14 @@ const ExcelEditorPage = ({ initialData = [], errors = [], onSave, onCancel }) =>
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  // Initialize data from imported Excel
+  // Initialize data from imported Excel: generate unique beneficiary IDs and map to three table formats
   useEffect(() => {  
     const initializeData = async () => {
       console.log('ExcelEditorPage - initialData:', initialData);
       console.log('ExcelEditorPage - initialData length:', initialData.length);
       
       if (initialData.length > 0) {
-        // Generate beneficiary IDs for all rows
+        // Generate unique beneficiary IDs for all imported rows via batch API call
         let generatedIds = [];
         try {
           const result = await beneficiariesAPI.generateMultipleIds(initialData.length);
@@ -52,7 +52,7 @@ const ExcelEditorPage = ({ initialData = [], errors = [], onSave, onCancel }) =>
           return;
         }
 
-        // Map cleaned data to beneficiaries format with auto-generated IDs
+        // Map imported Excel data to beneficiaries format, using pre-generated IDs as fallback
         const mappedBeneficiaries = initialData.map((row, index) => ({
           beneficiaryId: row.beneficiaryId || generatedIds[index] || '',
           firstName: row.firstName || '',
@@ -71,7 +71,7 @@ const ExcelEditorPage = ({ initialData = [], errors = [], onSave, onCancel }) =>
 
         console.log('ExcelEditorPage - mappedBeneficiaries:', mappedBeneficiaries);
 
-        // Map seedling data if available
+        // Map seedling data from Excel, linking to beneficiary via ID (generated or existing)
         const mappedSeedlings = initialData.map((row, index) => ({
           beneficiaryId: row.beneficiaryId || generatedIds[index] || '',
           receivedSeedling: row.received || '',
@@ -157,10 +157,10 @@ const ExcelEditorPage = ({ initialData = [], errors = [], onSave, onCancel }) =>
     return validationErrors;
   };
 
-  // Delete row functions
+  // Cascade delete: removing a beneficiary also removes all associated seedlings and crop surveys
   const deleteBeneficiaryRow = (index) => {
     if (beneficiaries.length > 1) {
-      // Get the beneficiary ID before deleting
+      // Capture beneficiary ID before deletion to cascade to related records
       const deletedBeneficiaryId = beneficiaries[index].beneficiaryId;
       
       // Remove the beneficiary
@@ -208,13 +208,14 @@ const ExcelEditorPage = ({ initialData = [], errors = [], onSave, onCancel }) =>
     );
   };
 
-  // AG-Grid Column Definitions
+  // AG-Grid Column Definitions with row number, editable fields, and delete action
   const beneficiariesColumnDefs = useMemo(() => [
     { 
       field: 'rowNum', 
       headerName: '#', 
       editable: false, 
       width: 60,
+      // Auto-generate row numbers starting from 1
       valueGetter: (params) => params.node.rowIndex + 1,
       cellStyle: { fontWeight: 600 }
     },
@@ -244,6 +245,7 @@ const ExcelEditorPage = ({ initialData = [], errors = [], onSave, onCancel }) =>
       headerName: 'Purok *', 
       editable: true, 
       width: 100,
+      // Display '-' for empty purok values while preserving empty string in data
       valueFormatter: (params) => params.value || '-',
       valueGetter: (params) => params.data?.purok || ''
     },
@@ -276,12 +278,14 @@ const ExcelEditorPage = ({ initialData = [], errors = [], onSave, onCancel }) =>
       headerName: 'Date Received', 
       editable: true, 
       width: 150,
+      // Format ISO dates to MM-DD-YYYY for display
       valueFormatter: (params) => params.value ? formatDate(params.value) : ''
     },
     { field: 'plantedSeedling', headerName: 'Planted Seedling', editable: true, width: 160 },
     { field: 'plotId', headerName: 'Plot ID', editable: true, width: 150 },
     { 
       headerName: 'Date Planting', 
+      // Grouped columns for planting date range (start and end dates)
       children: [
         { 
           field: 'plantingStartDate', 
@@ -346,11 +350,7 @@ const ExcelEditorPage = ({ initialData = [], errors = [], onSave, onCancel }) =>
     }
   ], [deleteCropSurveyRow, DeleteButtonRenderer]);
 
-
-
-
-
-  // Handle save
+  // Validate required fields and save all three tables (beneficiaries, seedlings, crop surveys) in one operation
   const handleSave = async () => {
     const validationErrors = validateData();
     

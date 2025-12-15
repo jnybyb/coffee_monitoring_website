@@ -12,20 +12,19 @@ const MapDetails = ({ beneficiaries = [], farmPlots = [], onViewAll, onEditPlot,
   const [selectedPlot, setSelectedPlot] = useState(null);
   const [selectedPlotIndex, setSelectedPlotIndex] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
   
-  // Filter beneficiaries to only include those with farm plots
+  // Filter to show only beneficiaries that have associated farm plots
   const beneficiariesWithPlots = beneficiaries.filter(beneficiary => 
     farmPlots.some(plot => plot.beneficiaryId === (beneficiary.beneficiaryId || beneficiary.id))
   );
   
-  // Filter beneficiaries based on search term and those with plots
+  // Apply search filter on top of beneficiaries with plots
   const filteredBeneficiaries = beneficiariesWithPlots.filter(beneficiary =>
     (beneficiary.fullName || beneficiary.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (beneficiary.beneficiaryId || beneficiary.id || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
   
-  // Filter farms to only include those currently plotted (all farm plots passed in)
+  // Search across plot ID, beneficiary name for farm filtering
   const filteredFarms = farmPlots.filter(farm =>
     (farm.plotNumber || farm.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (farm.plotId || farm.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -57,7 +56,7 @@ const MapDetails = ({ beneficiaries = [], farmPlots = [], onViewAll, onEditPlot,
     setIsViewModalOpen(true);
   };
 
-  // Handle beneficiary click - open modal with first plot of the beneficiary
+  // Find and display first plot when beneficiary card is clicked
   const handleBeneficiaryClick = (beneficiary) => {
     const beneficiaryPlots = farmPlots.filter(
       plot => plot.beneficiaryId === (beneficiary.beneficiaryId || beneficiary.id)
@@ -65,6 +64,7 @@ const MapDetails = ({ beneficiaries = [], farmPlots = [], onViewAll, onEditPlot,
     
     if (beneficiaryPlots.length > 0) {
       const firstPlot = beneficiaryPlots[0];
+      // Get index from full farmPlots array for navigation consistency
       const plotIndex = farmPlots.findIndex(p => p.id === firstPlot.id);
       setSelectedPlot(firstPlot);
       setSelectedPlotIndex(plotIndex);
@@ -79,7 +79,7 @@ const MapDetails = ({ beneficiaries = [], farmPlots = [], onViewAll, onEditPlot,
     setSelectedPlotIndex(null);
   };
 
-  // Handle edit plot
+  // Proxy edit handler to parent component
   const handleEditPlot = async (updatedPlotData, index) => {
     try {
       if (onEditPlot) {
@@ -87,15 +87,10 @@ const MapDetails = ({ beneficiaries = [], farmPlots = [], onViewAll, onEditPlot,
       }
     } catch (error) {
       console.error('Error editing plot:', error);
-      // Error is already handled by the modal
     }
   };
 
-  // Handle delete plot (placeholder - can be customized)
-  const handleDeletePlot = (plot, index) => {
-    console.log('Delete plot:', plot, index);
-    // Add delete functionality here if needed
-  };
+
   
   return (
     <div style={{
@@ -160,7 +155,7 @@ const MapDetails = ({ beneficiaries = [], farmPlots = [], onViewAll, onEditPlot,
               left: '10px',
               top: '50%',
               transform: 'translateY(-50%)',
-              color: '#6c757d',
+              color: 'var(--placeholder-text)',
               pointerEvents: 'none'
             }}
           />
@@ -302,9 +297,9 @@ const MapDetails = ({ beneficiaries = [], farmPlots = [], onViewAll, onEditPlot,
                       transition: 'all 0.2s ease'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f8f9fa';
+                      e.currentTarget.style.backgroundColor = 'var(--light-gray)';
                       e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';
+                      e.currentTarget.style.boxShadow = '0 4px 8px var(--shadow-subtle)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'var(--white)';
@@ -423,9 +418,9 @@ const MapDetails = ({ beneficiaries = [], farmPlots = [], onViewAll, onEditPlot,
                       transition: 'all 0.2s ease'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f8f9fa';
+                      e.currentTarget.style.backgroundColor = 'var(--light-gray)';
                       e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';
+                      e.currentTarget.style.boxShadow = '0 4px 8px var(--shadow-subtle)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'var(--white)';
@@ -513,7 +508,6 @@ const MapDetails = ({ beneficiaries = [], farmPlots = [], onViewAll, onEditPlot,
         otherPlots={farmPlots}
         beneficiaries={beneficiaries}
         onEdit={handleEditPlot}
-        onDelete={handleDeletePlot}
         onDeleteSuccess={onDeleteSuccess}
       />
     </div>

@@ -85,7 +85,6 @@ const MODAL_STYLES = {
 };
 
 const FIELD_STYLES = {
-  wrapper: { marginBottom: '12px' },
   label: {
     display: 'block',
     marginBottom: '0.1rem',
@@ -147,7 +146,7 @@ const FIELD_STYLES = {
   }
 };
 
-// Helper function to construct full name
+// Helper function to construct full name from beneficiary object, handling both pre-formatted and component names
 const getFullName = (beneficiary) => {
   if (beneficiary.fullName) return beneficiary.fullName;
   const firstName = beneficiary.firstName || '';
@@ -196,7 +195,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
     color: value ? 'var(--pagination-gray)' : 'var(--text-gray)'
   });
 
-  // Fetch plots when beneficiary changes
+  // Fetch and filter plots whenever beneficiary changes to populate Plot ID dropdown
   useEffect(() => {
     const fetchPlots = async () => {
       if (formData.beneficiaryId) {
@@ -226,6 +225,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
       setBeneficiariesLoading(true);
       try {
         const data = await beneficiariesAPI.getAll();
+        // Handle different API response formats: direct array or nested data.data structure
         let beneficiariesArray = data;
         if (data && data.data && Array.isArray(data.data)) {
           beneficiariesArray = data.data;
@@ -248,6 +248,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
     if (isOpen) fetchBeneficiaries();
   }, [isOpen]);
 
+  // Pre-populate form with record data when editing, or reset to empty when adding new
   useEffect(() => {
     if (record) {
       const beneficiary = beneficiaries.find(b => b.beneficiaryId === record.beneficiaryId);
@@ -259,6 +260,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
         dateReceived: record.dateReceived ? new Date(record.dateReceived).toISOString().split('T')[0] : '',
         planted: record.planted?.toString() || '',
         plot: record.plot || '',
+        // Handle both dateOfPlantingStart and legacy dateOfPlanting field
         dateOfPlantingStart: record.dateOfPlantingStart ? new Date(record.dateOfPlantingStart).toISOString().split('T')[0] : (record.dateOfPlanting ? new Date(record.dateOfPlanting).toISOString().split('T')[0] : ''),
         dateOfPlantingEnd: record.dateOfPlantingEnd ? new Date(record.dateOfPlantingEnd).toISOString().split('T')[0] : ''
       };
@@ -293,6 +295,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
     if (!formData.received || formData.received <= 0 || isNaN(parseInt(formData.received))) {
       newErrors.received = 'Received seedlings must be a valid positive number';
     }
+    // Validate date received (critical field for record tracking)
     if (!formData.dateReceived || formData.dateReceived.trim() === '') {
       newErrors.dateReceived = 'Date received is required';
     } else {
@@ -301,6 +304,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
         newErrors.dateReceived = 'Please enter a valid date';
       }
     }
+    // Validate planted seedlings and ensure it doesn't exceed received amount
     if (!formData.planted || formData.planted <= 0 || isNaN(parseInt(formData.planted))) {
       newErrors.planted = 'Planted seedlings must be a valid positive number';
     } else if (parseInt(formData.planted) > parseInt(formData.received)) {
@@ -309,6 +313,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
     if (!formData.dateOfPlantingStart) {
       newErrors.dateOfPlantingStart = 'Date of planting (start) is required';
     }
+    // Ensure date range is valid: end date cannot be before start date
     if (formData.dateOfPlantingEnd && formData.dateOfPlantingStart) {
       const startDate = new Date(formData.dateOfPlantingStart);
       const endDate = new Date(formData.dateOfPlantingEnd);
@@ -323,6 +328,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    // Sync beneficiary name with ID when beneficiary dropdown changes
     if (name === 'beneficiaryName') {
       const beneficiary = beneficiaries.find(b => getFullName(b) === value);
       const newFormData = {
@@ -331,7 +337,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
         beneficiaryId: beneficiary ? beneficiary.beneficiaryId : ''
       };
       setFormData(newFormData);
-      // Check if changes were made
+      // Track changes by comparing JSON strings
       if (initialFormData) {
         const changed = JSON.stringify(newFormData) !== JSON.stringify(initialFormData);
         setHasChanges(changed);
@@ -339,7 +345,6 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
     } else {
       const newFormData = { ...formData, [name]: value };
       setFormData(newFormData);
-      // Check if changes were made
       if (initialFormData) {
         const changed = JSON.stringify(newFormData) !== JSON.stringify(initialFormData);
         setHasChanges(changed);
@@ -363,6 +368,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
       if (!formData.dateReceived || formData.dateReceived.trim() === '') {
         throw new Error('Date received is required');
       }
+      // Ensure dateReceived is properly formatted for database storage (YYYY-MM-DD)
       let formattedDateReceived = formData.dateReceived;
       try {
         const date = new Date(formData.dateReceived);
@@ -373,6 +379,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
         throw new Error('Invalid date format for Date Received');
       }
 
+      // Parse and validate numeric inputs
       const received = parseInt(formData.received);
       const planted = parseInt(formData.planted);
 
@@ -395,11 +402,10 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
         await onSubmit(submitData);
       }
 
-      // Hide saving modal and show success modal
+      // Execute sequential modal display: saving → success (1.5s) → close (2.5s total)
       setShowSavingModal(false);
       setShowSuccessModal(true);
       
-      // Auto-close success modal and main modal after delay
       setTimeout(() => {
         setShowSuccessModal(false);
         onClose();
@@ -675,5 +681,3 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
 };
 
 export default EditSeedlingRecordModal;
-
-

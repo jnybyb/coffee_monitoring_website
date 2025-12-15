@@ -37,23 +37,20 @@ const ImportDisplayPage = ({ initialData = [], errors = [], onSave, onCancel }) 
     fetchBeneficiaries();
   }, []);
 
+  // Match imported data with existing beneficiaries and prepare for AG Grid display
   useEffect(() => {
     const initializeData = async () => {
       console.log('ImportDisplayPage - initialData:', initialData);
       console.log('ImportDisplayPage - initialData length:', initialData.length);
       
       if (initialData.length > 0) {
-        // Data is already cleansed from backend with correct structure
-        // Each row contains: plotId, beneficiaryName, pointNumber, latitude, longitude, elevation
-        
-        // First pass: Build a comprehensive map of beneficiary names per plotId
+        // Build map to ensure consistent beneficiary names across all points in same plot
         const plotBeneficiaryMap = new Map();
         
         initialData.forEach(row => {
           const plotId = row.plotId;
           const beneficiaryName = row.beneficiaryName;
           
-          // If this row has both plotId and beneficiaryName, store the mapping
           if (plotId && beneficiaryName && beneficiaryName.trim() !== '') {
             if (!plotBeneficiaryMap.has(plotId)) {
               plotBeneficiaryMap.set(plotId, beneficiaryName.trim());
@@ -63,13 +60,12 @@ const ImportDisplayPage = ({ initialData = [], errors = [], onSave, onCancel }) 
         
         console.log('Plot to Beneficiary Name Map:', Array.from(plotBeneficiaryMap.entries()));
         
-        const pointCounters = new Map(); // Track point numbers per plot
+        const pointCounters = new Map();
         
         const processedData = initialData.map((row, index) => {
           const plotId = row.plotId || '';
           
-          // Get beneficiary name from the map (ensures consistency across all points)
-          // If not in map, use the row's beneficiaryName directly
+          // Ensure consistent beneficiary name across all points in same plot
           let beneficiaryName = '';
           if (plotId && plotBeneficiaryMap.has(plotId)) {
             beneficiaryName = plotBeneficiaryMap.get(plotId);
@@ -79,7 +75,7 @@ const ImportDisplayPage = ({ initialData = [], errors = [], onSave, onCancel }) 
           
           console.log(`Row ${index}: plotId=${plotId}, beneficiaryName from map=${beneficiaryName}`);
           
-          // Try to match beneficiary by name
+          // Match beneficiary by comparing full name variations (with/without middle name)
           let matchedBeneficiary = null;
           if (beneficiaryName) {
             matchedBeneficiary = beneficiaries.find(ben => {
@@ -99,10 +95,9 @@ const ImportDisplayPage = ({ initialData = [], errors = [], onSave, onCancel }) 
 
           const beneficiaryId = matchedBeneficiary?.beneficiaryId || row.beneficiaryId || '';
           
-          // Use plotId as the key for point counting
           const plotKey = plotId || `unknown_${index}`;
           
-          // Get or initialize point counter for this plot
+          // Track point numbers per plot
           if (!pointCounters.has(plotKey)) {
             pointCounters.set(plotKey, 0);
           }
@@ -276,6 +271,7 @@ const ImportDisplayPage = ({ initialData = [], errors = [], onSave, onCancel }) 
     }]);
   };
 
+  // Organize data into plots and coordinates for backend processing
   const handleSave = async () => {
     const validationErrors = validateData();
     
@@ -289,14 +285,13 @@ const ImportDisplayPage = ({ initialData = [], errors = [], onSave, onCancel }) 
 
     setSaving(true);
     try {
-      // Separate merged data into farm plots and coordinates for database
       const plotsMap = new Map();
       const coordinates = [];
       
       mergedData.forEach((row) => {
         const plotKey = row.plotId || row.beneficiaryId || row.beneficiaryName;
         
-        // Extract farm plot info (one per plot)
+        // Extract unique plot information
         if (plotKey && !plotsMap.has(plotKey)) {
           plotsMap.set(plotKey, {
             plotId: row.plotId,
@@ -460,18 +455,18 @@ const ImportDisplayPage = ({ initialData = [], errors = [], onSave, onCancel }) 
           <div style={{
             marginBottom: '1.5rem',
             padding: '1rem',
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffc107',
+            backgroundColor: 'var(--warning)',
+            border: '1px solid var(--warning)',
             borderRadius: '5px',
             display: 'flex',
             gap: '0.8rem',
             alignItems: 'flex-start'
           }}>
-            <FiAlertCircle size={20} color="#856404" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+            <FiAlertCircle size={20} color="var(--warning)" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
             <div style={{ flex: 1 }}>
               <h4 style={{
                 margin: '0 0 0.5rem 0',
-                color: '#856404',
+                color: 'var(--warning)',
                 fontSize: '0.8rem',
                 fontWeight: 600
               }}>
@@ -481,7 +476,7 @@ const ImportDisplayPage = ({ initialData = [], errors = [], onSave, onCancel }) 
                 maxHeight: '100px',
                 overflowY: 'auto',
                 fontSize: '0.68rem',
-                color: '#856404'
+                color: 'var(--warning)'
               }}>
                 {errors.map((error, idx) => (
                   <div key={idx} style={{ marginBottom: '0.25rem' }}>
@@ -496,12 +491,12 @@ const ImportDisplayPage = ({ initialData = [], errors = [], onSave, onCancel }) 
         {/* Instructions */}
         <div style={{
           padding: '0.8rem 0.9rem',
-          backgroundColor: '#e8f5e8',
-          border: '1px solid #c3e6c3',
+          backgroundColor: 'var(--mint-green)',
+          border: '1px solid var(--mint-green)',
           borderRadius: '5px',
           marginBottom: '1.5rem',
           fontSize: '0.7rem',
-          color: '#2c5530',
+          color: 'var(--dark-green)',
           fontWeight: 500
         }}>
           <strong>Instructions:</strong> Review the imported data below. All coordinates have been converted from DMS (Degrees Minutes Seconds) to decimal format. 
