@@ -1,6 +1,6 @@
 // Excel/CSV Export Utility for Reports
 
-// Format timestamp for export
+// Format timestamp to localized date-time string (MM/DD/YYYY, HH:MM AM/PM)
 const formatTimestamp = (timestamp) => {
   if (!timestamp) return '—';
   const date = new Date(timestamp);
@@ -14,7 +14,7 @@ const formatTimestamp = (timestamp) => {
   });
 };
 
-// Get activity title
+// Map activity type codes to human-readable titles for export display
 const getActivityTitle = (type) => {
   switch (type) {
     case 'beneficiary':
@@ -32,7 +32,7 @@ const getActivityTitle = (type) => {
   }
 };
 
-// Headers map for each tab
+// Column headers for each report tab, defining the structure of exported CSV files
 const headersMap = {
   'Beneficiary List': ['Beneficiary ID', 'Full Name', 'Gender', 'Marital Status', 'Birth Date', 'Age', 'Cellphone', 'Address'],
   'Farm Location': ['Plot ID', 'Beneficiary', 'Hectares', 'Address', 'Coordinates'],
@@ -41,7 +41,7 @@ const headersMap = {
   'Recent Activities': ['Type', 'Action', 'Timestamp', 'User']
 };
 
-// Get cell value by attribute ID
+// Extract cell value from data item based on attribute ID, handling different data structures per tab
 const getCellValueByAttribute = (item, attrId) => {
   switch (attrId) {
     // Beneficiary List
@@ -58,6 +58,7 @@ const getCellValueByAttribute = (item, attrId) => {
     case 'ben_cellphone':
       return item.cellphone || '—';
     case 'ben_address':
+      // Build address string from Philippine address hierarchy, filtering out empty and 'unknown' values
       const benAddress = [item.purok, item.barangay, item.municipality, item.province]
         .filter(part => part && part.trim() !== '' && part.toLowerCase() !== 'unknown')
         .join(', ');
@@ -122,11 +123,11 @@ const getCellValueByAttribute = (item, attrId) => {
   }
 };
 
-// Convert data item to CSV row based on active tab or selected attributes
+// Convert data item to CSV row array, supporting both full tab export and selective attribute export
 const convertToCSVRow = (item, activeTab, selectedAttributes, attributeColumnMap) => {
   let row = [];
   
-  // If attributes are selected, export only those columns
+  // Export only selected columns when attributes are specified (from filter/column selector)
   if (selectedAttributes && selectedAttributes.length > 0) {
     return selectedAttributes.map(attrId => {
       return getCellValueByAttribute(item, attrId);
@@ -192,7 +193,7 @@ const convertToCSVRow = (item, activeTab, selectedAttributes, attributeColumnMap
       row = [];
   }
   
-  // Escape commas and quotes in cells
+  // Escape special CSV characters (commas, quotes, newlines) to prevent parsing errors
   return row.map(cell => {
     const cellStr = String(cell);
     if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
@@ -202,21 +203,21 @@ const convertToCSVRow = (item, activeTab, selectedAttributes, attributeColumnMap
   });
 };
 
-// Main export function
+// Main export function: generates CSV file from table data with optional column filtering
 export const exportToExcel = (activeTab, data, selectedAttributes = null, attributeColumnMap = null) => {
   // If no tab is selected or no data, do nothing
   if (!activeTab || !data || data.length === 0) return;
   
   let headers = [];
   
-  // Get headers based on selected attributes or default
+  // Build header row: include row numbers (#) plus selected or default columns
   if (selectedAttributes && selectedAttributes.length > 0 && attributeColumnMap) {
     headers = ['#', ...selectedAttributes.map(attrId => attributeColumnMap[attrId]?.header).filter(Boolean)];
   } else {
     headers = ['#', ...(headersMap[activeTab] || [])];
   }
   
-  // Create CSV content
+  // Create CSV content: header row + data rows with auto-incremented row numbers
   const csvRows = [
     headers.join(','),
     ...data.map((item, index) => {
@@ -226,6 +227,7 @@ export const exportToExcel = (activeTab, data, selectedAttributes = null, attrib
       } else {
         rowData = [index + 1, ...convertToCSVRow(item, activeTab, null, null)];
       }
+      // Apply CSV escaping to each cell in the row
       return rowData.map(cell => {
         const cellStr = String(cell);
         if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
@@ -238,13 +240,13 @@ export const exportToExcel = (activeTab, data, selectedAttributes = null, attrib
   
   const csvContent = csvRows.join('\n');
   
-  // Create blob and download
+  // Create blob and trigger browser download with generated filename (TabName_YYYY-MM-DD.csv)
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
   link.setAttribute('href', url);
   
-  // Generate filename with tab name and timestamp
+  // Generate filename: replace spaces with underscores and append current date (YYYY-MM-DD)
   const filename = `${activeTab.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
   link.setAttribute('download', filename);
   link.style.visibility = 'hidden';

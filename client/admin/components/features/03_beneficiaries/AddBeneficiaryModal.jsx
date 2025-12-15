@@ -13,15 +13,12 @@ import {
   BENEFICIARY_MODAL_STYLES 
 } from '../../../utils/formConstants';
 
-
-
 const AddRecord = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState(INITIAL_BENEFICIARY_FORM_DATA);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-
 
   const {
     provinces,
@@ -34,7 +31,7 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
     resetBarangays
   } = useAddressData();
 
-  // Reset form when modal opens
+  // Reset form and load default municipality options for Davao Oriental when modal opens
   useEffect(() => {
     if (isOpen) {
       setFormData(INITIAL_BENEFICIARY_FORM_DATA);
@@ -49,11 +46,13 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
   const handleInputChange = (e) => {
     const { name, value, files } = e.target;
     
+    // Handle image file upload with type validation
     if (name === 'picture' && files) {
       const file = files[0];
       if (file && file.type.startsWith('image/')) {
         setFormData(prev => ({ ...prev, [name]: file }));
       }
+    // Cascade address fields: reset dependent fields when province changes
     } else if (name === 'province') {
       setFormData(prev => ({
         ...prev,
@@ -64,6 +63,7 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
       resetMunicipalities();
       resetBarangays();
       loadMunicipalities(value);
+    // Reset barangay when municipality changes and load new barangays
     } else if (name === 'municipality') {
       setFormData(prev => ({
         ...prev,
@@ -86,17 +86,17 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
   const validateForm = () => {
     const newErrors = {};
     
-    // Only First Name, Last Name, and Purok are required
+    // Only First Name, Last Name, and Purok are required fields
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.purok.trim()) newErrors.purok = 'Purok is required';
     
-    // Optional field validations
+    // Validate Philippine mobile number format (09XXXXXXXXX) if provided
     if (formData.cellphone && formData.cellphone.trim() && !/^09\d{9}$/.test(formData.cellphone)) {
       newErrors.cellphone = 'Please enter a valid Philippine mobile number (09XXXXXXXXX)';
     }
     
-    // Address cascading validation (only if filled)
+    // Enforce cascading address selection: municipality requires province, barangay requires municipality
     if (formData.province && !formData.municipality) {
       newErrors.municipality = 'Municipality is required when province is selected';
     }
@@ -120,6 +120,7 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
 
       const age = calculateAge(formData.birthDate) ?? 0;
 
+      // Prepare payload with defaults for optional fields to ensure data consistency
       const payload = {
         beneficiaryId: formData.beneficiaryId?.trim() || null,
         firstName: formData.firstName,
@@ -147,7 +148,6 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
       setErrors({});
       setSubmitError('');
       
-      // Show success modal for 2.5 seconds
       setShowSuccessModal(true);
     } catch (err) {
       console.error('Failed to add record:', err);
@@ -488,56 +488,6 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
         buttonBorderRadius={4}
         hideButton={true}
       />
-      <style>{`
-        .hide-scrollbar-modal::-webkit-scrollbar {
-          width: 6px;
-        }
-        .hide-scrollbar-modal::-webkit-scrollbar-track {
-          background: #f1f1f1;
-          border-radius: 3px;
-        }
-        .hide-scrollbar-modal::-webkit-scrollbar-thumb {
-          background: #c1c1c1;
-          border-radius: 3px;
-        }
-        .hide-scrollbar-modal::-webkit-scrollbar-thumb:hover {
-          background: #a8a8a8;
-        }
-        .modal-input-field::placeholder {
-          color: #adb5bd;
-        }
-        .modal-input-field:focus {
-          outline: 2px solid var(--emerald-green);
-          border-color: var(--emerald-green);
-        }
-        .custom-select-dropdown {
-          max-height: 44px;
-          overflow-y: auto;
-          scrollbar-width: thin;
-          scrollbar-color: #c1c1c1 #f1f1f1;
-        }
-        .custom-select-dropdown option {
-          font-size: 12px;
-        }
-        .custom-select-dropdown:focus {
-          outline: 2px solid var(--emerald-green);
-          max-height: 200px;
-        }
-        .custom-select-dropdown::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-select-dropdown::-webkit-scrollbar-track {
-          background: #f1f1f1;
-          border-radius: 3px;
-        }
-        .custom-select-dropdown::-webkit-scrollbar-thumb {
-          background: #c1c1c1;
-          border-radius: 3px;
-        }
-        .custom-select-dropdown::-webkit-scrollbar-thumb:hover {
-          background: #a8a8a8;
-        }
-      `}</style>
     </>
   );
 };

@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import NoDataDisplay from '../../ui/NoDataDisplay';
 import FilterSection from '../../ui/FilterSection';
 import ReportTable from '../../ui/ListTable';
 import TableTabs from './TableTabs';
 import AlertModal from '../../ui/AlertModal';
 import PDFEditorPage from './PDFEditorPage';
 import { exportToExcel } from './ExcelExport';
-import { exportToPDF } from './PDFExport';
 import { statisticsAPI, beneficiariesAPI, farmPlotsAPI, seedlingsAPI, cropStatusAPI } from '../../../services/api';
 
 const Reports = () => {
@@ -17,19 +15,19 @@ const Reports = () => {
   const [showNoTabAlert, setShowNoTabAlert] = useState(false);
   const [showPDFEditor, setShowPDFEditor] = useState(false);
   
-  // Data states for different tabs
+  // Data states for different report tabs (beneficiaries, plots, seedlings, crop surveys)
   const [beneficiaries, setBeneficiaries] = useState([]);
   const [farmPlots, setFarmPlots] = useState([]);
   const [seedlings, setSeedlings] = useState([]);
   const [cropSurveys, setCropSurveys] = useState([]);
   const [loadingData, setLoadingData] = useState(false);
   
-  // Filtered data states
+  // Filtered data states for applying custom filters and search
   const [filteredData, setFilteredData] = useState([]);
   const [activeFilters, setActiveFilters] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch data based on active tab
+  // Fetch tab-specific data from API based on active tab selection
   useEffect(() => {
     if (activeTab) {
       fetchTabData();
@@ -70,6 +68,7 @@ const Reports = () => {
     }
   };
 
+  // Restore active tab from sessionStorage when navigating from dashboard "View All" buttons
   useEffect(() => {
     // Check if there's a stored active tab (from View All click)
     const storedTab = sessionStorage.getItem('reportsActiveTab');
@@ -78,8 +77,6 @@ const Reports = () => {
       sessionStorage.removeItem('reportsActiveTab'); // Clean up after reading
     }
   }, []);
-
-
 
   const handleExportClick = () => {
     setIsExportDropdownOpen(!isExportDropdownOpen);
@@ -91,7 +88,7 @@ const Reports = () => {
       setShowNoTabAlert(true);
       return;
     }
-    // Pass selected attributes to export function - use search filtered data
+    // Export uses search-filtered data to match visible table content (filters + search)
     exportToExcel(activeTab, searchFilteredData, activeFilters?.selectedAttributes, attributeColumnMap);
     setIsExportDropdownOpen(false);
   };
@@ -116,13 +113,13 @@ const Reports = () => {
     console.log('Selected attributes:', filters.selectedAttributes);
     setActiveFilters(filters);
     
-    // Check if attributes from multiple tables are selected
+    // Handle cross-table filtering: merge data when attributes from multiple tables are selected
     if (filters.selectedAttributes && filters.selectedAttributes.length > 0) {
       const selectedTables = new Set(
         filters.selectedAttributes.map(attrId => attributeColumnMap[attrId]?.table).filter(Boolean)
       );
       
-      // If attributes from multiple tables are selected, merge data
+      // Merge data from multiple tables if cross-table attributes are selected
       if (selectedTables.size > 1) {
         const mergedData = getMergedTableData(filters.selectedAttributes);
         setFilteredData(mergedData);
@@ -214,13 +211,14 @@ const Reports = () => {
 
   const currentTabData = activeFilters ? filteredData : getCurrentTabData();
   
-  // Apply search filter to current data
+  // Apply search filter to current data (after applying custom filters)
   const searchFilteredData = searchQuery ? currentTabData.filter(item => {
     const query = searchQuery.toLowerCase();
     
     switch (activeTab) {
       case 'Beneficiary List':
         const fullName = `${item.firstName || ''} ${item.middleName || ''} ${item.lastName || ''}`.toLowerCase();
+        // Build searchable address string from Philippine address hierarchy
         const address = [item.purok, item.barangay, item.municipality, item.province]
           .filter(Boolean).join(' ').toLowerCase();
         return (
@@ -271,7 +269,7 @@ const Reports = () => {
     setSearchQuery(query);
   };
   
-  // Function to merge data from multiple tables based on selected attributes
+  // Merge data from multiple tables based on selected attributes for cross-table reporting
   const getMergedTableData = (selectedAttrIds) => {
     const selectedTables = new Set(
       selectedAttrIds.map(attrId => attributeColumnMap[attrId]?.table).filter(Boolean)
@@ -301,6 +299,7 @@ const Reports = () => {
       }
       
       tableData.forEach(item => {
+        // Tag each item with source table for proper rendering in merged view
         allData.push({ ...item, _sourceTable: table });
       });
     });
@@ -311,7 +310,7 @@ const Reports = () => {
   // Filter functions for each tab
   const filterBeneficiaries = (data, filters) => {
     return data.filter(item => {
-      // Search filter
+      // Text search across ID, name, phone, and address fields
       if (filters.beneficiarySearch) {
         const searchLower = filters.beneficiarySearch.toLowerCase();
         const fullName = `${item.firstName || ''} ${item.middleName || ''} ${item.lastName || ''}`.toLowerCase();
@@ -415,7 +414,7 @@ const Reports = () => {
         if (!matchesSearch) return false;
       }
       
-      // Date filter (check both dateReceived and planting dates)
+      // Date filter: check if any of the three date fields fall within the specified range
       if (filters.dateFrom || filters.dateTo) {
         const dateReceived = item.dateReceived ? new Date(item.dateReceived) : null;
         const plantingStart = item.dateOfPlantingStart ? new Date(item.dateOfPlantingStart) : null;
@@ -425,7 +424,7 @@ const Reports = () => {
         const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null;
         const toDate = filters.dateTo ? new Date(filters.dateTo) : null;
         
-        // Check if any of the dates fall within the range
+        // Check if any of the dates (received, planting start, planting end) fall within range
         const dates = [dateReceived, plantingStart, plantingEnd].filter(Boolean);
         for (const date of dates) {
           const inRange = (!fromDate || date >= fromDate) && (!toDate || date <= toDate);
@@ -494,7 +493,7 @@ const Reports = () => {
     });
   };
 
-  // Attribute ID to column mapping
+  // Attribute ID to column header and table mapping for dynamic column selection
   const attributeColumnMap = {
     // Beneficiary List
     'ben_id': { header: 'Beneficiary ID', table: 'Beneficiary List' },
@@ -540,7 +539,7 @@ const Reports = () => {
     'act_user': { header: 'User', table: 'Recent Activities' },
   };
 
-  // Render table headers based on active tab
+  // Render table headers dynamically based on active tab and selected filter attributes
   const renderTableHeaders = () => {
     const allHeaders = {
       'Beneficiary List': ['#', 'Beneficiary ID', 'Full Name', 'Gender', 'Marital Status', 'Birth Date', 'Age', 'Cellphone', 'Address'],
@@ -552,27 +551,27 @@ const Reports = () => {
 
     let currentHeaders = allHeaders[activeTab] || [];
     
-    // Filter headers based on selected attributes
+    // Filter headers to show only selected attributes when custom column filtering is applied
     if (activeFilters?.selectedAttributes && activeFilters.selectedAttributes.length > 0) {
       // Check if attributes from multiple tables are selected
       const selectedTables = new Set(
         activeFilters.selectedAttributes.map(attrId => attributeColumnMap[attrId]?.table).filter(Boolean)
       );
       
-      // If multiple tables or any attributes selected, show only selected columns
+      // Display only selected columns for cross-table reports or filtered views
       if (selectedTables.size > 1 || activeFilters.selectedAttributes.length > 0) {
         const selectedHeaders = activeFilters.selectedAttributes
           .map(attrId => attributeColumnMap[attrId]?.header)
           .filter(Boolean);
         
         if (selectedHeaders.length > 0) {
-          // Always keep the '#' column, then add selected columns
+          // Always preserve row number column (#), then add selected columns
           currentHeaders = ['#', ...selectedHeaders];
         }
       }
     }
     
-    // Define column widths for Recent Activities
+    // Define column widths for Recent Activities tab to prevent overflow
     const getColumnWidth = (header, index) => {
       if (index === 0) return '60px';
       if (activeTab === 'Recent Activities') {
@@ -638,7 +637,7 @@ const Reports = () => {
     );
   };
 
-  // Get cell data based on attribute ID
+  // Get cell data by attribute ID for dynamic column rendering in filtered/merged views
   const getCellData = (item, attrId) => {
     const cellStyle = {
       padding: '0.65rem 0.5rem',
@@ -661,6 +660,7 @@ const Reports = () => {
       case 'ben_cellphone':
         return <td key={attrId} style={cellStyle}>{item.cellphone || '—'}</td>;
       case 'ben_address':
+        // Build address string from Philippine address hierarchy, filtering out empty and 'unknown' values
         const benAddress = [item.purok, item.barangay, item.municipality, item.province]
           .filter(part => part && part.trim() !== '' && part.toLowerCase() !== 'unknown')
           .join(', ');
@@ -725,7 +725,7 @@ const Reports = () => {
     }
   };
 
-  // Render individual table row based on active tab or merged data
+  // Render table row with dynamic columns based on filters or default full row for active tab
   const renderTableRow = (item, rowIndex) => {
     const cellStyle = {
       padding: '0.65rem 0.5rem',
@@ -737,11 +737,12 @@ const Reports = () => {
     if (activeFilters?.selectedAttributes && activeFilters.selectedAttributes.length > 0) {
       const selectedAttrs = activeFilters.selectedAttributes;
       
-      // Check if this is merged table data
+      // Check for cross-table data merging
       const selectedTables = new Set(
         selectedAttrs.map(attrId => attributeColumnMap[attrId]?.table).filter(Boolean)
       );
       
+      // Render custom column selection for filtered or merged views
       if (selectedTables.size > 1 || selectedAttrs.length > 0) {
         return (
           <>
@@ -752,9 +753,10 @@ const Reports = () => {
       }
     }
 
-    // Default rendering (no attributes selected)
+    // Default rendering (no attributes selected) - show all columns for active tab
     switch (activeTab) {
       case 'Beneficiary List':
+        // Build address string from Philippine address hierarchy, filtering out empty and 'unknown' values
         const benAddress = [item.purok, item.barangay, item.municipality, item.province]
           .filter(part => part && part.trim() !== '' && part.toLowerCase() !== 'unknown')
           .join(', ');
@@ -822,7 +824,7 @@ const Reports = () => {
         return null;
     }
   };
-  // If PDF Editor is open, show it instead of the main reports view
+  // Switch to PDF Editor view when user clicks export PDF (allows customization before export)
   if (showPDFEditor) {
     return (
       <PDFEditorPage

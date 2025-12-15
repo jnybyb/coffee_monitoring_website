@@ -31,12 +31,13 @@ const RecentActivities = ({ active, limit = 10, showViewAll = false }) => {
     fetchActivities();
   }, []);
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 30 seconds to keep activities current
   useEffect(() => {
     const intervalId = setInterval(() => {
       fetchActivities();
     }, 30000); // 30 seconds
 
+    // Cleanup interval on component unmount
     return () => clearInterval(intervalId);
   }, []);
 
@@ -47,6 +48,7 @@ const RecentActivities = ({ active, limit = 10, showViewAll = false }) => {
     }
   }, [active]);
 
+  // Map activity type to display title
   const getActivityTitle = (type) => {
     switch (type) {
       case 'beneficiary':
@@ -64,6 +66,7 @@ const RecentActivities = ({ active, limit = 10, showViewAll = false }) => {
     }
   };
 
+  // Map activity type to corresponding icon component
   const getActivityIcon = (type) => {
     switch (type) {
       case 'beneficiary':

@@ -6,6 +6,7 @@ const LineGraph = ({ active }) => {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Filter states for user-controlled chart display
   const [timePeriod, setTimePeriod] = useState('monthly'); // 'yearly', 'monthly', 'weekly'
   const [dataFilter, setDataFilter] = useState('all'); // 'all', 'alive', 'dead', 'seedlings'
 
@@ -23,6 +24,7 @@ const LineGraph = ({ active }) => {
     }
   };
 
+  // Fetch chart data when Dashboard becomes active
   useEffect(() => {
     if (active === 'Dashboard' || active) {
       fetchChartData();
@@ -148,6 +150,7 @@ const LineGraph = ({ active }) => {
             }}
           >
             <defs>
+              {/* Gradient definitions for chart lines */}
               <linearGradient id="seedlingGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="var(--teal)" stopOpacity={0.8}/>
                 <stop offset="95%" stopColor="var(--teal)" stopOpacity={0.1}/>
@@ -185,6 +188,7 @@ const LineGraph = ({ active }) => {
               }}
               cursor={{ fill: 'rgba(0,0,0,0.05)' }}
             />
+            {/* Conditionally render chart lines based on dataFilter selection */}
             {(dataFilter === 'all' || dataFilter === 'seedlings') && (
               <Line 
                 type="monotone"

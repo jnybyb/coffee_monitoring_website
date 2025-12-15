@@ -114,7 +114,7 @@ const FIELD_STYLES = {
   }
 };
 
-// Helper function to resolve image preview URLs
+// Helper function to resolve image preview URLs from multiple formats: File objects, full URLs, filenames, or absolute paths
 const resolvePreviewUrl = (p) => {
   if (!p) return '';
   if (p instanceof File) return URL.createObjectURL(p);
@@ -167,7 +167,7 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
     color: value ? 'var(--pagination-gray)' : 'var(--text-gray)'
   });
 
-  // Fetch plots when beneficiary changes
+  // Fetch and filter plots whenever beneficiary changes to populate Plot ID dropdown
   useEffect(() => {
     const fetchPlots = async () => {
       if (formData.beneficiaryId) {
@@ -192,7 +192,7 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
     fetchPlots();
   }, [formData.beneficiaryId]);
 
-  // Load record data when editing
+  // Pre-populate form with record data when editing, parsing ISO dates without timezone conversion
   useEffect(() => {
     if (record && isOpen) {
       const initialData = {
@@ -211,7 +211,7 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
       setFormData(initialData);
       setOriginalFormData(initialData);
       
-      // Handle existing pictures properly for edit mode
+      // Handle existing pictures properly for edit mode (filenames or URLs from database)
       if (record.pictures && Array.isArray(record.pictures) && record.pictures.length > 0) {
         setSelectedFiles(record.pictures);
       } else {
@@ -229,7 +229,7 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
     }
   }, [record, isOpen]);
 
-  // Check for changes whenever formData or selectedFiles change
+  // Track changes by comparing current data with original, handling pictures separately to enable/disable save button
   useEffect(() => {
     if (originalFormData) {
       const formChanged = Object.keys(formData).some(key => {
@@ -245,10 +245,12 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
 
   const validateForm = () => {
     const newErrors = {};
+    // Required fields: survey date, surveyer, beneficiary, and record ID for edit operations
     if (!formData.surveyDate) newErrors.surveyDate = 'Survey date is required';
     if (!formData.surveyer) newErrors.surveyer = 'Surveyer name is required';
     if (!formData.beneficiaryName) newErrors.beneficiaryName = 'Beneficiary is required';
     if (!formData.id) newErrors.id = 'Record ID is required for updates';
+    // Validate crop counts: alive crops must be positive, dead crops cannot be negative
     if (!formData.aliveCrops || formData.aliveCrops <= 0) newErrors.aliveCrops = 'Number of alive crops must be greater than 0';
     if (formData.deadCrops === '' || formData.deadCrops < 0) newErrors.deadCrops = 'Number of dead crops cannot be negative';
     setErrors(newErrors);
@@ -264,6 +266,7 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
+    // Preserve existing images (from database) and add new File objects, limiting to 10 total
     setSelectedFiles(prev => {
       const existingImages = prev.filter(item => !(item instanceof File));
       const newFiles = [...existingImages, ...files];
@@ -296,7 +299,7 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
       
       submitData.id = formData.id;
       
-      // For edit mode, we need to separate existing images (filenames) from new files
+      // Separate existing images (filenames from database) from new File objects for proper backend handling
       const existingImages = selectedFiles.filter(item => typeof item === 'string' && !(item instanceof File));
       const newFiles = selectedFiles.filter(item => item instanceof File);
       
@@ -304,7 +307,7 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
       submitData.existingPictures = existingImages;
       submitData.pictures = newFiles;
       
-      // Show loading modal
+      // Execute sequential modal display: loading → success (1s delay)
       setShowSaveLoading(true);
       
       // Save to database
@@ -315,10 +318,9 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
         await onSubmit(submitData);
       }
       
-      // Hide loading modal after a short delay
+      // Hide loading modal after a short delay, then show success modal
       setTimeout(() => {
         setShowSaveLoading(false);
-        // Show success modal
         setShowSaveSuccess(true);
       }, 1000);
       
@@ -580,5 +582,3 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
 };
 
 export default EditCropStatusModal;
-
-

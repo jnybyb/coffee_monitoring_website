@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUserCircle, FaVenusMars, FaRing, FaBirthdayCake, FaPhoneAlt, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaUserCircle } from 'react-icons/fa';
 import { LuLandPlot } from 'react-icons/lu';
 import { GiSeedling } from 'react-icons/gi';
 import { MdOutlineAssignment } from 'react-icons/md';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
-import { RiAddLargeFill, RiArrowRightDoubleLine } from 'react-icons/ri';
-import { CiEdit, CiImport } from "react-icons/ci";
+import { RiAddLargeFill } from 'react-icons/ri';
+import { CiEdit } from "react-icons/ci";
 import { PiTrashLight } from "react-icons/pi";
 import { ActionButton } from '../../ui/BeneficiaryButtons';
 import AddFarmPlotModal from '../../features/02_farm-monitoring/AddFarmPlotModal';
@@ -37,8 +37,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [showDeleteLoading, setShowDeleteLoading] = useState(false);
   const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
-  const [showImportSuccess, setShowImportSuccess] = useState(false);
-  const [importType, setImportType] = useState('');
+
   const [currentBeneficiary, setCurrentBeneficiary] = useState(selectedBeneficiary);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [seedlingRecords, setSeedlingRecords] = useState([]);
@@ -66,9 +65,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
   const [farmPlots, setFarmPlots] = useState([]);
   const [loadingFarmPlots, setLoadingFarmPlots] = useState(false);
 
-  // Refs for file inputs
-  const farmPlotFileInputRef = useRef(null);
-  const seedlingFileInputRef = useRef(null);
+
   
   // Update local state when selectedBeneficiary prop changes
   useEffect(() => {
@@ -162,24 +159,16 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
   
   if (!currentBeneficiary) return null;
 
-  const beneficiaries = [currentBeneficiary];
-
   const handleDeleteBeneficiary = async () => {
     try {
-      // Close the confirmation modal
       setShowDeleteAlert(false);
-      
-      // Show loading indicator
       setShowDeleteLoading(true);
       
-      // Call the API to delete the beneficiary
       await beneficiariesAPI.delete(currentBeneficiary.id);
       
-      // Hide loading indicator after 1.5 seconds
+      // Sequential modal display: loading (1.5s) → success
       setTimeout(() => {
         setShowDeleteLoading(false);
-        
-        // Show success message
         setShowDeleteSuccess(true);
       }, 1500);
     } catch (error) {
@@ -193,40 +182,12 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
 
   const handleDeleteSuccessClose = () => {
     setShowDeleteSuccess(false);
-    // Close the detail container
     onClose();
-    // Refresh the beneficiary list in the parent component
+    // Notify parent component to refresh beneficiary list via custom event
     window.dispatchEvent(new CustomEvent('beneficiaryDeleted'));
   };
 
-  // Handle file import for farm plots
-  const handleFarmPlotImport = () => {
-    farmPlotFileInputRef.current?.click();
-  };
 
-  // Handle file import for seedlings
-  const handleSeedlingImport = () => {
-    seedlingFileInputRef.current?.click();
-  };
-
-  // Handle file selection
-  const handleFileChange = (event, type) => {
-    const file = event.target.files[0];
-    if (file) {
-      // Show success message
-      setImportType(type);
-      setShowImportSuccess(true);
-      
-      // Reset file input
-      event.target.value = '';
-    }
-  };
-
-  const handleImportSuccessClose = () => {
-    setShowImportSuccess(false);
-    // In a real implementation, you would process the file here
-    console.log(`File imported for ${importType}`);
-  };
 
   // Handle seedling record added
   const handleSeedlingAdded = async () => {
@@ -261,17 +222,15 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
   const handleDeleteSeedlingConfirm = async () => {
     try {
       setShowDeleteSeedlingAlert(false);
-      // Show loading indicator
       setShowDeleteSeedlingLoading(true);
       
       await seedlingsAPI.delete(selectedSeedlingRecord.id);
       
-      // Hide loading indicator and show success
+      // Sequential modal display: loading (1.5s) → success (1.5s) → refresh data
       setTimeout(() => {
         setShowDeleteSeedlingLoading(false);
         setShowDeleteSeedlingSuccess(true);
         
-        // Hide success modal after 1.5 seconds and refresh records
         setTimeout(() => {
           setShowDeleteSeedlingSuccess(false);
           fetchSeedlingRecords(currentBeneficiary.beneficiaryId);
@@ -301,27 +260,27 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
   
-  // Format date range for planting dates
+  // Format date range for planting dates with smart condensing (e.g., "Mar 15-20, 2024" for same month)
   const formatDateRange = (start, end) => {
     if (!start) return 'N/A';
     const startDate = new Date(start);
     if (!end) return formatDate(start);
     const endDate = new Date(end);
     
-    // Same month and year
+    // Condense format if same month and year: "Mar 15-20, 2024"
     if (startDate.getFullYear() === endDate.getFullYear() && startDate.getMonth() === endDate.getMonth()) {
       const month = startDate.toLocaleDateString('en-US', { month: 'short' });
       return `${month} ${startDate.getDate()}-${endDate.getDate()}, ${startDate.getFullYear()}`;
     }
-    // Different month or year
+    // Full format for different months: "Mar 15, 2024 - Apr 10, 2024"
     return `${formatDate(start)} - ${formatDate(end)}`;
   };
   
-  // Resolve image URL for crop status pictures
+  // Resolve image URLs from various formats: full URLs, absolute paths, or filenames
   const resolveImageUrl = (pic) => {
     if (!pic) return '';
     if (typeof pic === 'string' && pic.startsWith('http')) return pic;
-    // Handle filenames from database
+    // Convert database filenames to full upload URLs
     if (typeof pic === 'string' && !pic.startsWith('http') && !pic.startsWith('/')) {
       return `http://localhost:5000/uploads/${pic}`;
     }
@@ -340,7 +299,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
   // Handle edit crop status record
   const handleEditCropStatusClick = (record, e) => {
     e.stopPropagation();
-    // Close any success modals before opening edit modal
+    // Prevent modal overlap by closing success modals before opening edit modal
     setShowCropStatusUpdateSuccess(false);
     setShowAddCropStatusSuccess(false);
     setSelectedCropStatusRecord(record);
@@ -358,17 +317,15 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
   const handleDeleteCropStatusConfirm = async () => {
     try {
       setShowDeleteCropStatusAlert(false);
-      // Show loading indicator
       setShowDeleteCropStatusLoading(true);
       
       await cropStatusAPI.delete(selectedCropStatusRecord.id);
       
-      // Hide loading indicator and show success
+      // Sequential modal display: loading (1.5s) → success (1.5s) → refresh data
       setTimeout(() => {
         setShowDeleteCropStatusLoading(false);
         setShowDeleteCropStatusSuccess(true);
         
-        // Hide success modal after 1.5 seconds and refresh records
         setTimeout(() => {
           setShowDeleteCropStatusSuccess(false);
           fetchCropStatusRecords(currentBeneficiary.beneficiaryId);
@@ -388,9 +345,8 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
     await fetchCropStatusRecords(currentBeneficiary.beneficiaryId);
     setShowEditCropStatus(false);
     setSelectedCropStatusRecord(null);
-    // Show success modal (it will auto-close after delay)
+    // Display success modal with auto-close after 1.5s
     setShowCropStatusUpdateSuccess(true);
-    // Auto-hide success modal after delay
     setTimeout(() => {
       setShowCropStatusUpdateSuccess(false);
     }, 1500);
@@ -399,9 +355,8 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
   // Handle crop status record added
   const handleCropStatusAdded = async () => {
     await fetchCropStatusRecords(currentBeneficiary.beneficiaryId);
-    // Show success modal (it will auto-close after delay)
+    // Display success modal with auto-close after 1.5s
     setShowAddCropStatusSuccess(true);
-    // Auto-hide success modal after delay
     setTimeout(() => {
       setShowAddCropStatusSuccess(false);
     }, 1500);
@@ -412,14 +367,13 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
     try {
       await beneficiariesAPI.update(currentBeneficiary.id, updateData);
       
-      // Refresh the current beneficiary data to show updated information
+      // Refresh local beneficiary data to display updated information
       await refreshBeneficiaryData();
       
-      // Refresh the beneficiary list in the parent component
+      // Notify parent component to refresh list via custom event
       window.dispatchEvent(new CustomEvent('beneficiaryDeleted'));
       
-      // Don't close here - let the success modal in EditBeneficiaryModal handle it
-      // The modal will close itself after showing the success message
+      // Modal closure handled by EditBeneficiaryModal after success message
     } catch (error) {
       console.error('Error updating beneficiary:', error);
       throw error;
@@ -597,7 +551,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
                 value={
                   currentBeneficiary.birthDate
                     ? (() => {
-                        // Parse date string directly without timezone conversion
+                        // Parse ISO date directly without timezone conversion to prevent date shifting
                         const dateStr = currentBeneficiary.birthDate.split('T')[0];
                         const [year, month, day] = dateStr.split('-');
                         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -610,16 +564,19 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
               <InfoRow label="Cellphone Num." value={currentBeneficiary.cellphone} />
               <InfoRow
                 label="Address"
-                value={(() => {
-                  const addressParts = [
-                    currentBeneficiary.purok,
-                    currentBeneficiary.barangay,
-                    currentBeneficiary.municipality,
-                    currentBeneficiary.province
-                  ].filter(part => part && part.trim() !== '' && part.toLowerCase() !== 'unknown');
-                  
-                  return addressParts.length > 0 ? addressParts.join(', ') : '-';
-                })()}
+                value={
+                  // Build address string excluding 'Unknown' values
+                  (() => {
+                    const addressParts = [
+                      currentBeneficiary.purok,
+                      currentBeneficiary.barangay,
+                      currentBeneficiary.municipality,
+                      currentBeneficiary.province
+                    ].filter(part => part && part.trim() !== '' && part.toLowerCase() !== 'unknown');
+                    
+                    return addressParts.length > 0 ? addressParts.join(', ') : '-';
+                  })()
+                }
               />
             </div>
           </div>
@@ -679,9 +636,8 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
                     <div
                       key={plot.id || index}
                       onClick={() => {
-                        // Store the selected plot data in sessionStorage
+                        // Store plot ID in sessionStorage for farm monitoring page to auto-select
                         sessionStorage.setItem('selectedPlotId', plot.id || plot.plotId);
-                        // Navigate to farm monitoring page
                         navigate('/farm-monitoring', { state: { selectedPlot: plot } });
                       }}
                       style={{
@@ -920,7 +876,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
               </div>
               <button
                 onClick={() => {
-                  // Close any success modals before opening add modal
+                  // Prevent modal overlap by closing success modals before opening add modal
                   setShowCropStatusUpdateSuccess(false);
                   setShowAddCropStatusSuccess(false);
                   setShowAddCropStatus(true);
@@ -1097,22 +1053,6 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
         </div>
       </div>
 
-      {/* Hidden file inputs */}
-      <input
-        type="file"
-        ref={farmPlotFileInputRef}
-        style={{ display: 'none' }}
-        onChange={(e) => handleFileChange(e, 'farm plots')}
-        accept=".csv,.xlsx,.xls,.json"
-      />
-      <input
-        type="file"
-        ref={seedlingFileInputRef}
-        style={{ display: 'none' }}
-        onChange={(e) => handleFileChange(e, 'seedling records')}
-        accept=".csv,.xlsx,.xls,.json"
-      />
-
       <AddFarmPlotModal
         isOpen={showAddFarmPlot}
         onClose={() => setShowAddFarmPlot(false)}
@@ -1120,7 +1060,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
           console.log('Farm plot data:', data);
           setShowAddFarmPlot(false);
         }}
-        beneficiaries={beneficiaries}
+        beneficiaries={[currentBeneficiary]}
       />
       <AddSeedlingRecordModal
         isOpen={showAddSeedling}
@@ -1258,20 +1198,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
         autoCloseDelay={1500}
         hideButton={true}
       />
-      
-      {/* Import Success Modal */}
-      <AlertModal
-        isOpen={showImportSuccess}
-        onClose={handleImportSuccessClose}
-        type="success"
-        title="Import Successful"
-        message={`File imported successfully for ${importType}!`}
-        confirmText="OK"
-        showCancel={false}
-        onConfirm={handleImportSuccessClose}
-        autoClose={true}
-        autoCloseDelay={1500}
-      />
+
       
       {/* Seedling Update Success Modal */}
       <AlertModal

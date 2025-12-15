@@ -173,12 +173,12 @@ const formBodyStyle = {
   gap: 12,
 };
 
-// Helper function to convert DMS to Decimal Degrees
+// Convert DMS (Degrees Minutes Seconds) format to Decimal Degrees
 const dmsToDecimal = (dmsString) => {
   if (!dmsString) return null;
   
   // Match DMS format: 7°15'20.4"N or 126°20'36.5"E
-  const regex = /([0-9.]+)[°\s]+([0-9.]+)?['\s]*([0-9.]+)?["\s]*([NSEW])?/i;
+  const regex = /([0-9.]+)[°\s]+([0-9.]+)?["\s]*([0-9.]+)?["\s]*([NSEW])?/i;
   const match = dmsString.match(regex);
   
   if (!match) return null;
@@ -190,7 +190,7 @@ const dmsToDecimal = (dmsString) => {
   
   let decimal = degrees + minutes / 60 + seconds / 3600;
   
-  // Apply direction
+  // Apply direction (S and W are negative)
   if (direction.toUpperCase() === 'S' || direction.toUpperCase() === 'W') {
     decimal *= -1;
   }
@@ -198,16 +198,14 @@ const dmsToDecimal = (dmsString) => {
   return decimal;
 };
 
-// Helper function to detect coordinate format
+// Detect whether coordinate string is in DMS or decimal format
 const detectCoordinateFormat = (coordString) => {
   if (!coordString) return 'decimal';
   
-  // Check if it contains DMS indicators (°, ', ")
   if (coordString.includes('°') || coordString.includes("'") || coordString.includes('"')) {
     return 'dms';
   }
   
-  // Check if it's a valid decimal number
   const decimal = parseFloat(coordString);
   if (!isNaN(decimal)) {
     return 'decimal';
@@ -216,7 +214,7 @@ const detectCoordinateFormat = (coordString) => {
   return 'unknown';
 };
 
-// Helper to format address safely without showing "undefined"
+// Format beneficiary address for display, handling missing fields gracefully
 const formatSelectedAddress = (beneficiary) => {
   if (!beneficiary) return '';
   if (beneficiary.address) return beneficiary.address;
@@ -227,9 +225,8 @@ const formatSelectedAddress = (beneficiary) => {
   return parts.join(', ');
 };
 
-function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBeneficiary, isLoading = false }) {
+function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBeneficiary }) {
   const [selectedId, setSelectedId] = useState('');
-  const [hectares, setHectares] = useState('');
   const [generatedPlotId, setGeneratedPlotId] = useState('Auto-generated');
   const [coordinates, setCoordinates] = useState([
     { lat: '', lng: '', elevation: '' },
@@ -244,24 +241,19 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
   // Find selected beneficiary object
   const selected = beneficiaries?.find(b => b.beneficiaryId === selectedId || b.id === selectedId) || {};
 
-  // Generate Plot ID when beneficiary is selected
+  // Auto-generate Plot ID in format BXXX-PLYY when beneficiary is selected
   useEffect(() => {
     const generatePlotId = async () => {
       if (selectedId) {
         try {
-          // Extract beneficiary number from ID (e.g., 'BEN-001' -> '001')
           const beneficiaryNumber = selectedId.substring(4);
           
-          // Fetch existing plots for this beneficiary
           const allPlots = await farmPlotsAPI.getAll();
-          
-          // Filter plots for this beneficiary
           const beneficiaryPlots = allPlots.filter(plot => plot.beneficiaryId === selectedId);
           
-          // Determine next plot number
+          // Extract plot numbers from existing plot IDs to find next available number
           let nextPlotNumber = 1;
           if (beneficiaryPlots.length > 0) {
-            // Extract plot numbers and find the highest
             const plotNumbers = beneficiaryPlots.map(plot => {
               const plotId = plot.id;
               const plPosition = plotId.indexOf('-PL');
@@ -277,7 +269,7 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
             }
           }
           
-          // Format plot ID: BXXX-PLYY
+          // Format: BXXX-PLYY (e.g., B001-PL01)
           const formattedPlotNumber = nextPlotNumber.toString().padStart(2, '0');
           const plotId = `B${beneficiaryNumber}-PL${formattedPlotNumber}`;
           setGeneratedPlotId(plotId);
@@ -303,7 +295,6 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
   useEffect(() => {
     if (!isOpen) {
       setSelectedId('');
-      setHectares('');
       setGeneratedPlotId('Auto-generated');
       setCoordinates([
         { lat: '', lng: '', elevation: '' },
@@ -334,6 +325,7 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
     setCoordinates(updated);
   };
 
+  // Validate and convert coordinates from DMS or decimal to decimal format for database storage
   const validateAndConvertCoordinates = (coordinates) => {
     const validCoordinates = [];
     
@@ -363,7 +355,7 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
         throw new Error(`Invalid longitude format at point ${i + 1}`);
       }
       
-      // Validate ranges
+      // Validate coordinate ranges
       if (isNaN(lat) || lat < -90 || lat > 90) {
         throw new Error(`Invalid latitude value at point ${i + 1} (must be between -90 and 90)`);
       }
@@ -371,7 +363,6 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
         throw new Error(`Invalid longitude value at point ${i + 1} (must be between -180 and 180)`);
       }
       
-      // Parse elevation (optional)
       const elevation = coord.elevation ? parseInt(coord.elevation, 10) : null;
       
       validCoordinates.push({ lat, lng, elevation });
@@ -383,7 +374,7 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (isLoading || isSaving) return; // Prevent submission while loading
+    if (isSaving) return; // Prevent submission while loading
     
     const newErrors = {};
     
@@ -412,7 +403,6 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
         beneficiaryId: selected.beneficiaryId || selected.id,
         fullName: selected.fullName || selected.name,
         address: selected.address,
-        hectares: hectares ? parseFloat(hectares) : null,
         coordinates: convertedCoordinates
       });
       
@@ -504,30 +494,15 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
               />
             </div>
 
-            <div style={twoColRowStyle}>
-              <div style={twoColColStyle}>
-                <label style={labelStyle}>Plot ID</label>
-                <input
-                  style={readOnlyInputStyle}
-                  value={generatedPlotId}
-                  readOnly
-                  tabIndex={-1}
-                  title={generatedPlotId === 'Auto-generated' ? 'Plot ID will be automatically generated' : `Generated Plot ID: ${generatedPlotId}`}
-                />
-              </div>
-              <div style={twoColColStyle}>
-                <InputField
-                  name="hectares"
-                  label="Hectares"
-                  type="number"
-                  value={hectares}
-                  onChange={e => setHectares(e.target.value)}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                  error={errors.hectares}
-                />
-              </div>
+            <div>
+              <label style={labelStyle}>Plot ID</label>
+              <input
+                style={readOnlyInputStyle}
+                value={generatedPlotId}
+                readOnly
+                tabIndex={-1}
+                title={generatedPlotId === 'Auto-generated' ? 'Plot ID will be automatically generated' : `Generated Plot ID: ${generatedPlotId}`}
+              />
             </div>
 
             <div>
@@ -606,7 +581,7 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
             <div style={{ ...buttonRowStyle, padding: '1rem 0 1rem 1rem' }}>
               <CancelButton 
                 onClick={onClose} 
-                disabled={isLoading || isSaving}
+                disabled={isSaving}
                 fontSize="11px"
                 padding="10px 18px"
                 borderRadius="5px"
@@ -614,7 +589,7 @@ function AddFarmPlotModal({ isOpen, onClose, onSubmit, beneficiaries, selectedBe
                 Cancel
               </CancelButton>
               <SaveButton 
-                disabled={isLoading || isSaving}
+                disabled={isSaving}
                 fontSize="11px"
                 padding="10px 18px"
                 borderRadius="5px"

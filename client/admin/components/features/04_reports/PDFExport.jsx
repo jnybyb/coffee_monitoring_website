@@ -2,7 +2,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-// Format timestamp for export
+// Format timestamp to localized date-time string (MM/DD/YYYY, HH:MM AM/PM)
 const formatTimestamp = (timestamp) => {
   if (!timestamp) return '—';
   const date = new Date(timestamp);
@@ -16,7 +16,7 @@ const formatTimestamp = (timestamp) => {
   });
 };
 
-// Get activity title
+// Map activity type codes to human-readable titles for PDF display
 const getActivityTitle = (type) => {
   switch (type) {
     case 'beneficiary':
@@ -34,7 +34,7 @@ const getActivityTitle = (type) => {
   }
 };
 
-// Headers map for each tab
+// Column headers for each report tab, defining PDF table structure
 const headersMap = {
   'Beneficiary List': ['Beneficiary ID', 'Full Name', 'Gender', 'Marital Status', 'Birth Date', 'Age', 'Cellphone', 'Address'],
   'Farm Location': ['Plot ID', 'Beneficiary', 'Hectares', 'Address', 'Coordinates'],
@@ -43,12 +43,13 @@ const headersMap = {
   'Recent Activities': ['Type', 'Action', 'Timestamp', 'User']
 };
 
-// Convert data item to PDF row based on active tab
+// Convert data item to PDF row array based on active tab, handling tab-specific data structures
 const convertToPDFRow = (item, activeTab) => {
   let row = [];
   
   switch (activeTab) {
     case 'Beneficiary List':
+      // Build address string from Philippine address hierarchy, filtering out empty values
       const address = [item.purok, item.barangay, item.municipality, item.province]
         .filter(part => part && part.trim() !== '')
         .join(', ');
@@ -109,7 +110,7 @@ const convertToPDFRow = (item, activeTab) => {
   return row;
 };
 
-// Main PDF export function
+// Main PDF export function: generates PDF with jsPDF and autoTable, applying custom styling and layout
 export const exportToPDF = (activeTab, data) => {
   // If no tab is selected or no data, do nothing
   if (!activeTab || !data || data.length === 0) return;
@@ -117,7 +118,7 @@ export const exportToPDF = (activeTab, data) => {
   // Get headers for the active tab
   const headers = headersMap[activeTab] || [];
   
-  // Initialize jsPDF
+  // Initialize jsPDF with landscape A4 format (297mm × 210mm)
   const doc = new jsPDF({
     orientation: 'landscape',
     unit: 'mm',
@@ -145,7 +146,7 @@ export const exportToPDF = (activeTab, data) => {
   // Prepare table data
   const tableData = data.map(item => convertToPDFRow(item, activeTab));
   
-  // Configure column widths based on tab
+// Configure column widths per tab for optimal layout and readability
   const getColumnStyles = (activeTab) => {
     switch (activeTab) {
       case 'Beneficiary List':
@@ -199,7 +200,7 @@ export const exportToPDF = (activeTab, data) => {
     }
   };
   
-  // Add table using autoTable
+  // Generate PDF table using autoTable plugin with custom styling
   doc.autoTable({
     head: [headers],
     body: tableData,
@@ -222,8 +223,8 @@ export const exportToPDF = (activeTab, data) => {
     },
     columnStyles: getColumnStyles(activeTab),
     margin: { top: 28, left: 14, right: 14 },
+    // Add page numbers to bottom center of each page
     didDrawPage: (data) => {
-      // Add page numbers
       const pageCount = doc.internal.getNumberOfPages();
       const pageSize = doc.internal.pageSize;
       const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
@@ -239,7 +240,7 @@ export const exportToPDF = (activeTab, data) => {
     }
   });
   
-  // Generate filename with tab name and timestamp
+  // Generate filename: TabName_YYYY-MM-DD.pdf (spaces replaced with underscores)
   const filename = `${activeTab.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
   
   // Save the PDF

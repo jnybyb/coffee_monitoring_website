@@ -10,9 +10,6 @@ import {
   MARITAL_STATUS_OPTIONS,
   BENEFICIARY_MODAL_STYLES 
 } from '../../../utils/formConstants';
-
-
-
 const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
   const [formData, setFormData] = useState({
     beneficiaryId: '',
@@ -38,15 +35,12 @@ const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
   const [originalData, setOriginalData] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
 
-
-  
   // Address data hook
   const {
     provinces,
     municipalities,
     barangays,
     loading: addressLoading,
-    error: addressError,
     loadMunicipalities,
     loadBarangays,
     resetMunicipalities,
@@ -56,7 +50,7 @@ const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
   // Initialize form data when beneficiary prop changes or modal opens
   useEffect(() => {
     if (beneficiary && isOpen) {
-      // Filter out 'unknown' values from address fields
+      // Clean 'Unknown' values from database to empty strings for proper form editing
       const cleanValue = (val) => {
         if (!val || val.toLowerCase() === 'unknown') return '';
         return val;
@@ -66,7 +60,7 @@ const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
       const municipality = cleanValue(beneficiary.municipality);
       const barangay = cleanValue(beneficiary.barangay);
       
-      // Format birthDate correctly to avoid timezone issues
+      // Parse ISO date without timezone to prevent date shifting (e.g., avoid 2000-01-01 becoming 1999-12-31)
       let formattedBirthDate = '';
       if (beneficiary.birthDate) {
         const dateStr = beneficiary.birthDate.split('T')[0];
@@ -97,7 +91,7 @@ const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
       setErrors({});
       setSubmitError('');
       
-      // Load municipalities and barangays for the existing address only if province exists
+      // Pre-populate cascading dropdowns with existing address data
       if (province) {
         loadMunicipalities(province);
         if (municipality) {
@@ -115,7 +109,7 @@ const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
     if (name === 'picture' && files) {
       updatedFormData.picture = files[0];
       setFormData(updatedFormData);
-      setHasChanges(true); // Picture change always means there are changes
+      setHasChanges(true);
     } else {
       updatedFormData[name] = value;
       
@@ -127,7 +121,7 @@ const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
       
       setFormData(updatedFormData);
       
-      // Check if data has changed
+      // Track changes by comparing current form data with original data (excluding computed fields)
       if (originalData) {
         const changed = Object.keys(originalData).some(key => {
           if (key === 'picture') return updatedFormData.picture !== null;
@@ -137,7 +131,7 @@ const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
         setHasChanges(changed);
       }
       
-      // Handle cascading dropdowns
+      // Cascading address dropdown logic: reset dependent fields when parent changes
       if (name === 'province') {
         resetMunicipalities();
         resetBarangays();
@@ -164,17 +158,17 @@ const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Only First Name, Last Name, and Purok are required
+    // Required fields: First Name, Last Name, and Purok only
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.purok.trim()) newErrors.purok = 'Purok is required';
     
-    // Optional field validations
+    // Validate Philippine mobile number format (09XXXXXXXXX) only if provided
     if (formData.cellphone && formData.cellphone.trim() && !/^09\d{9}$/.test(formData.cellphone)) {
       newErrors.cellphone = 'Please enter a valid Philippine mobile number (09XXXXXXXXX)';
     }
     
-    // Address cascading validation (only if filled)
+    // Enforce cascading address hierarchy: province → municipality → barangay
     if (formData.province && !formData.municipality) {
       newErrors.municipality = 'Municipality is required when province is selected';
     }
@@ -185,8 +179,6 @@ const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -200,6 +192,7 @@ const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
 
       const age = calculateAge(formData.birthDate) ?? 0;
       
+      // Prepare update data: replace empty optional fields with 'Unknown' for consistency
       const updateData = {
         firstName: formData.firstName,
         middleName: formData.middleName,
@@ -218,7 +211,7 @@ const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
       
       await onSubmit(updateData);
       
-      // Show success modal instead of closing immediately
+      // Display success modal (auto-closes after 1.5s)
       setShowSuccessModal(true);
     } catch (err) {
       console.error('Failed to update beneficiary:', err);
@@ -370,6 +363,7 @@ const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
                     border: '1px solid var(--border-gray)',
                     overflow: 'hidden',
                   }}>
+                  {/* Display priority: new upload → existing picture → default icon */}
                   {formData.picture ? (
                     <img
                       src={URL.createObjectURL(formData.picture)}
@@ -626,4 +620,4 @@ const EditBeneficiaryModal = ({ isOpen, onClose, onSubmit, beneficiary }) => {
   );
 };
 
-export default EditBeneficiaryModal; 
+export default EditBeneficiaryModal;

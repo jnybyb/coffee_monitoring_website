@@ -140,7 +140,7 @@ const FIELD_STYLES = {
   }
 };
 
-// Helper function to construct full name
+// Construct full name from beneficiary object, handling both pre-formatted and component names
 const getFullName = (beneficiary) => {
   if (beneficiary.fullName) return beneficiary.fullName;
   const firstName = beneficiary.firstName || '';
@@ -160,9 +160,7 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
     dateOfPlantingStart: '',
     dateOfPlantingEnd: ''
   });
-  const [beneficiaries, setBeneficiaries] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [beneficiariesLoading, setBeneficiariesLoading] = useState(false);
   const [plots, setPlots] = useState([]);
   const [plotsLoading, setPlotsLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -187,13 +185,14 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
     color: value ? 'var(--pagination-gray)' : 'var(--text-gray)'
   });
 
-  // Fetch plots when beneficiary changes
+  // Fetch and filter plots whenever beneficiary changes to populate Plot ID dropdown
   useEffect(() => {
     const fetchPlots = async () => {
       if (formData.beneficiaryId) {
         try {
           setPlotsLoading(true);
           const allPlots = await farmPlotsAPI.getAll();
+          // Filter to show only plots belonging to selected beneficiary
           const beneficiaryPlots = allPlots.filter(
             plot => plot.beneficiaryId === formData.beneficiaryId
           );
@@ -212,10 +211,10 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
     fetchPlots();
   }, [formData.beneficiaryId]);
 
-  // Reset form data whenever the modal opens
+  // Reset form and pre-populate beneficiary data when modal opens
   useEffect(() => {
     if (isOpen) {
-      // Pre-populate beneficiary fields if a selected beneficiary is provided
+      // Pre-populate beneficiary fields when opened from a specific beneficiary context
       if (selectedBeneficiary) {
         const fullName = getFullName(selectedBeneficiary);
         setFormData({
@@ -258,18 +257,17 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
       newErrors.received = 'Received seedlings must be a valid positive number';
     }
     
-    // Validate date received - this is critical
+    // Validate date received (critical field for record tracking)
     if (!formData.dateReceived || formData.dateReceived.trim() === '') {
       newErrors.dateReceived = 'Date received is required';
     } else {
-      // Validate date format
       const dateReceived = new Date(formData.dateReceived);
       if (isNaN(dateReceived.getTime())) {
         newErrors.dateReceived = 'Please enter a valid date';
       }
     }
 
-    // Validate planted seedlings
+    // Validate planted seedlings and ensure it doesn't exceed received amount
     if (!formData.planted || formData.planted <= 0 || isNaN(parseInt(formData.planted))) {
       newErrors.planted = 'Planted seedlings must be a valid positive number';
     } else if (parseInt(formData.planted) > parseInt(formData.received)) {
@@ -281,7 +279,7 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
       newErrors.dateOfPlantingStart = 'Date of planting (start) is required';
     }
     
-    // Validate end date if provided
+    // Validate planting date range: end date must be after start date
     if (formData.dateOfPlantingEnd && formData.dateOfPlantingStart) {
       const startDate = new Date(formData.dateOfPlantingStart);
       const endDate = new Date(formData.dateOfPlantingEnd);
@@ -297,35 +295,16 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
-    if (name === 'beneficiaryName') {
-      const beneficiary = beneficiaries.find(b => getFullName(b) === value);
-      setFormData(prev => ({ 
-        ...prev, 
-        beneficiaryName: value, 
-        beneficiaryId: beneficiary ? beneficiary.beneficiaryId : '' 
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
+    setFormData(prev => ({ ...prev, [name]: value }));
     
-    // Clear error for this field when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-    
-    // Clear submit error when user makes changes
-    if (submitError) {
-      setSubmitError('');
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Clear previous errors
-    setSubmitError('');
-    
-    // Validate form
     if (!validateForm()) {
       return;
     }
@@ -334,12 +313,11 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
     setShowSavingModal(true);
     
     try {
-      // Ensure dateReceived is properly formatted
+      // Ensure dateReceived is properly formatted for database storage (YYYY-MM-DD)
       if (!formData.dateReceived || formData.dateReceived.trim() === '') {
         throw new Error('Date received is required');
       }
       
-      // Format dateReceived to YYYY-MM-DD
       let formattedDateReceived = formData.dateReceived;
       try {
         const date = new Date(formData.dateReceived);
@@ -350,11 +328,10 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
         throw new Error('Invalid date format for Date Received');
       }
       
-      // Parse and validate numeric fields
+      // Parse and validate numeric fields before submission
       const received = parseInt(formData.received);
       const planted = parseInt(formData.planted);
       
-      // Validate parsed values
       if (isNaN(received) || received <= 0) {
         throw new Error('Received seedlings must be a valid positive number');
       }
@@ -365,7 +342,7 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
         throw new Error('Planted seedlings cannot exceed received seedlings');
       }
       
-      // Prepare data for submission
+      // Prepare payload with formatted date and nullable end date for optional planting range
       const submitData = {
         beneficiaryId: formData.beneficiaryId,
         received,
@@ -376,16 +353,14 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
         dateOfPlantingEnd: formData.dateOfPlantingEnd || null
       };
       
-      // Pass cleaned data to parent for creation
       if (onSubmit) {
         await onSubmit(submitData);
       }
       
-      // Hide saving modal and show success modal
+      // Execute sequential modal display: saving → success (1.2s) → close
       setShowSavingModal(false);
       setShowSuccessModal(true);
       
-      // Auto-close success modal and main modal after delay
       setTimeout(() => {
         setShowSuccessModal(false);
         onClose();
@@ -395,7 +370,7 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
       console.error('Error submitting seedling record:', error);
       setShowSavingModal(false);
       
-      // Handle different types of errors
+      // Extract error message from various error formats (Error object, string, API response)
       let errorMessage = 'An error occurred while saving the record.';
       
       if (error.message) {
@@ -408,7 +383,7 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
       
       setSubmitError(errorMessage);
       
-      // Scroll to top to show error
+      // Scroll modal to top to ensure error message is visible
       const modalContent = document.querySelector('.modal-content');
       if (modalContent) {
         modalContent.scrollTop = 0;
@@ -472,20 +447,11 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
                   value={formData.beneficiaryName}
                   onChange={handleInputChange}
                   style={getInputStyle(errors.beneficiaryName)}
-                  disabled={loading || beneficiariesLoading || (selectedBeneficiary && isOpen)}
+                  disabled={loading || (selectedBeneficiary && isOpen)}
                 >
                   <option value="" style={{ fontSize: '13px' }}>
-                    {beneficiariesLoading ? 'Loading...' : selectedBeneficiary ? getFullName(selectedBeneficiary) : 'Select Beneficiary'}
+                    {selectedBeneficiary ? getFullName(selectedBeneficiary) : 'Select Beneficiary'}
                   </option>
-                  {beneficiaries && beneficiaries.length > 0 ? (
-                    beneficiaries.map(beneficiary => (
-                      <option key={beneficiary.beneficiaryId} value={getFullName(beneficiary)} style={{ fontSize: '13px' }}>
-                        {getFullName(beneficiary)}
-                      </option>
-                    ))
-                  ) : !beneficiariesLoading ? (
-                    <option value="" disabled style={{ fontSize: '13px' }}>No beneficiaries found</option>
-                  ) : null}
                 </select>
                 {errors.beneficiaryName && (
                   <span style={FIELD_STYLES.error}>

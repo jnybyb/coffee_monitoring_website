@@ -5,18 +5,24 @@ import { LuFilter, LuFilterX } from 'react-icons/lu';
 import { CiExport } from 'react-icons/ci';
 import { IoSearchOutline } from 'react-icons/io5';
 
+/**
+ * TableTabs Component
+ * Renders navigation tabs for different report types with search, filter, and export functionality
+ * Located in Reports section between Recent Activities and table content
+ */
 const TableTabs = ({
-  activeTab,
-  onTabChange,
-  isFilterActive,
-  onToggleFilter,
-  isExportDropdownOpen,
-  onExportClick,
-  onExportExcel,
-  onExportPDF,
-  searchQuery,
-  onSearchChange
+  activeTab,                // Currently selected tab
+  onTabChange,              // Handler for tab selection changes
+  isFilterActive,           // Whether filter section is visible
+  onToggleFilter,           // Handler to show/hide filter section
+  isExportDropdownOpen,     // Whether export dropdown menu is open
+  onExportClick,            // Handler to toggle export dropdown
+  onExportExcel,            // Handler for Excel export action
+  onExportPDF,              // Handler for PDF export action
+  searchQuery,              // Current search input value
+  onSearchChange            // Handler for search input changes
 }) => {
+  // Available report tabs
   const tabs = ['Beneficiary List', 'Farm Location', 'Seedling Record', 'Crop Survey Status', 'Recent Activities'];
 
   return (
@@ -28,12 +34,13 @@ const TableTabs = ({
       justifyContent: 'space-between',
       alignItems: 'center'
     }}>
-      {/* Tabs */}
+      {/* Tab Navigation Section */}
       <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => {
+              // Toggle tab: clicking active tab deselects it
               if (activeTab === tab) {
                 onTabChange(null);
               } else {
@@ -70,14 +77,15 @@ const TableTabs = ({
         ))}
       </div>
       
-      {/* Action Buttons */}
+      {/* Action Buttons Section: Search, Filter, Export */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        {/* Search Bar */}
+        {/* Search Bar - Filters table data in real-time */}
         <div style={{
           position: 'relative',
           display: 'flex',
           alignItems: 'center'
         }}>
+          {/* Search icon positioned inside input field */}
           <IoSearchOutline
             size={14}
             style={{
@@ -112,7 +120,7 @@ const TableTabs = ({
           />
         </div>
         
-        {/* Add/Clear Filter Button */}
+        {/* Add/Clear Filter Button - Toggles filter section visibility */}
         {!isFilterActive ? (
           <button
             onClick={onToggleFilter}
@@ -138,6 +146,7 @@ const TableTabs = ({
             <span>Add Filter</span>
           </button>
         ) : (
+          // Clear Filter button shown when filter is active
           <button
             onClick={onToggleFilter}
             style={{
@@ -163,7 +172,7 @@ const TableTabs = ({
           </button>
         )}
 
-        {/* Export Button */}
+        {/* Export Button - Dropdown menu for Excel and PDF export */}
         <div style={{ position: 'relative' }}>
           <button
             onClick={onExportClick}
@@ -195,7 +204,7 @@ const TableTabs = ({
             {isExportDropdownOpen ? <MdKeyboardArrowUp size={14} /> : <MdKeyboardArrowDown size={14} />}
           </button>
           
-          {/* Export Dropdown Menu */}
+          {/* Export Dropdown Menu - Appears below Export button */}
           {isExportDropdownOpen && (
             <div
               style={{
@@ -211,6 +220,7 @@ const TableTabs = ({
                 minWidth: '150px',
               }}
             >
+              {/* Excel Export Option */}
               <button
                 onClick={onExportExcel}
                 style={{
@@ -233,6 +243,7 @@ const TableTabs = ({
                 <FaFileExcel size={14} color="#107C41" />
                 <span>Export as Excel</span>
               </button>
+              {/* PDF Export Option */}
               <button
                 onClick={onExportPDF}
                 style={{

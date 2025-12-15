@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { MdClose, MdOutlineRotateRight } from 'react-icons/md';
 import { FaFilePdf } from 'react-icons/fa6';
 import { IoMdArrowBack } from 'react-icons/io';
 
@@ -14,7 +13,7 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
   const [isExporting, setIsExporting] = useState(false);
   const previewRef = useRef(null);
 
-  // Headers map for each tab
+  // Column headers for each report tab, with row numbering (#) included for PDF export
   const headersMap = {
     'Beneficiary List': ['#', 'Beneficiary ID', 'Full Name', 'Gender', 'Marital Status', 'Birth Date', 'Age', 'Cellphone', 'Address'],
     'Farm Location': ['#', 'Plot ID', 'Beneficiary', 'Hectares', 'Address', 'Coordinates'],
@@ -23,7 +22,7 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
     'Recent Activities': ['#', 'Type', 'Action', 'Timestamp', 'User']
   };
 
-  // Format timestamp for export
+  // Format timestamp to localized date-time string (MM/DD/YYYY, HH:MM AM/PM)
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return '—';
     const date = new Date(timestamp);
@@ -37,7 +36,7 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
     });
   };
 
-  // Get activity title
+  // Map activity type codes to human-readable titles for PDF display
   const getActivityTitle = (type) => {
     switch (type) {
       case 'beneficiary':
@@ -55,7 +54,7 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
     }
   };
 
-  // Get cell value by attribute ID
+  // Extract cell value from data item based on attribute ID, handling different data structures per tab
   const getCellValueByAttribute = (item, attrId) => {
     switch (attrId) {
       // Beneficiary List
@@ -72,6 +71,7 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
       case 'ben_cellphone':
         return item.cellphone || '—';
       case 'ben_address':
+        // Build address string from Philippine address hierarchy, filtering out empty and 'unknown' values
         const benAddress = [item.purok, item.barangay, item.municipality, item.province]
           .filter(part => part && part.trim() !== '' && part.toLowerCase() !== 'unknown')
           .join(', ');
@@ -136,9 +136,9 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
     }
   };
 
-  // Convert data item to PDF row
+  // Convert data item to PDF row array, supporting both full tab export and selective attribute export
   const convertToPDFRow = (item, activeTab, index) => {
-    // If attributes are selected, export only those columns
+    // Export only selected columns when attributes are specified (from filter/column selector)
     if (selectedAttributes && selectedAttributes.length > 0) {
       return [
         index + 1,
@@ -215,11 +215,11 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
     return row;
   };
 
-  // Generate preview
+  // Generate HTML preview of PDF pages with pagination, updating when settings change
   const generatePreview = () => {
     if (!previewRef.current || !data || data.length === 0) return;
 
-    // Get headers based on selected attributes or default
+    // Build header row: include row numbers (#) plus selected or default columns
     let headers = [];
     if (selectedAttributes && selectedAttributes.length > 0 && attributeColumnMap) {
       headers = ['#', ...selectedAttributes.map(attrId => attributeColumnMap[attrId]?.header).filter(Boolean)];
@@ -228,12 +228,13 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
     }
     const tableData = data.map((item, index) => convertToPDFRow(item, activeTab, index));
 
-    // Calculate rows per page (approximate)
+    // Calculate rows per page based on orientation (landscape fits more rows)
     const rowsPerPage = orientation === 'landscape' ? 25 : 35;
     const totalPages = Math.ceil(tableData.length / rowsPerPage);
 
     // Generate pages
     let pagesHTML = '';
+    // Paginate data and render each page with header, table, and page number
     for (let pageNum = 0; pageNum < totalPages; pageNum++) {
       const startIdx = pageNum * rowsPerPage;
       const endIdx = Math.min(startIdx + rowsPerPage, tableData.length);
@@ -275,11 +276,12 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
     previewRef.current.innerHTML = pagesHTML;
   };
 
+  // Regenerate preview whenever document settings or data change
   useEffect(() => {
     generatePreview();
   }, [orientation, paperSize, margins, title, fontSize, data, activeTab]);
 
-  // Handle export
+  // Export PDF with jsPDF and autoTable, applying all customization settings
   const handleExport = async () => {
     if (!activeTab || !data || data.length === 0) {
       alert('No data available to export');
@@ -289,7 +291,7 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
     setIsExporting(true);
 
     try {
-      // Get headers based on selected attributes or default
+      // Build header row: include row numbers (#) plus selected or default columns
       let headers = [];
       if (selectedAttributes && selectedAttributes.length > 0 && attributeColumnMap) {
         headers = ['#', ...selectedAttributes.map(attrId => attributeColumnMap[attrId]?.header).filter(Boolean)];
@@ -298,7 +300,7 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
       }
       const tableData = data.map((item, index) => convertToPDFRow(item, activeTab, index));
 
-      // Paper size dimensions in mm
+      // Paper size dimensions in mm (width × height)
       const paperSizes = {
         'a4': [210, 297],
         'a3': [297, 420],
@@ -332,10 +334,11 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
       });
       doc.text(`Generated: ${timestamp}`, margins.left, 22);
 
-      // Configure column styles
+      // Configure column widths per tab and orientation for optimal layout
       const getColumnStyles = (activeTab) => {
         switch (activeTab) {
           case 'Beneficiary List':
+            // Different column widths for landscape vs portrait orientation
             return orientation === 'landscape' ? {
               0: { cellWidth: 10 },
               1: { cellWidth: 25 },
@@ -401,7 +404,7 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
         }
       };
 
-      // Add table - FIXED: Call autoTable as standalone function
+      // Generate PDF table using autoTable plugin (standalone function, not method)
       autoTable(doc, {
         head: [headers],
         body: tableData,
@@ -424,11 +427,12 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
         },
         columnStyles: getColumnStyles(activeTab),
         margin: { top: margins.top, left: margins.left, right: margins.right, bottom: margins.bottom },
+        // Add header and page number to each page
         didDrawPage: (data) => {
           const pageSize = doc.internal.pageSize;
           const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
           
-          // Add header on every page
+          // Repeat header on every page after the first
           if (data.pageNumber > 1) {
             // Add title
             doc.setFontSize(16);
@@ -454,6 +458,7 @@ const PDFEditorPage = ({ activeTab, data, selectedAttributes, attributeColumnMap
         }
       });
 
+      // Save PDF with filename format: Title_YYYY-MM-DD.pdf
       const filename = `${title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(filename);
 
