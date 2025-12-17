@@ -67,7 +67,6 @@ const LoginPage = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setSubmitted(true);
 
     const nextErrors = validate({ username, password });
@@ -109,6 +108,10 @@ const LoginPage = () => {
 
   // Handle input change events
   const handleChange = (setter) => (e) => {
+    // Clear error state when user starts typing
+    if (error) {
+      setError('');
+    }
     setter(e.target.value);
     if (submitted) {
       setErrors(validate({ 

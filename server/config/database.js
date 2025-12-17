@@ -128,23 +128,33 @@ const createTables = async () => {
   }
 };
 
-// Seed default admin if none exists
+// Seed default admin if none exists, or update if credentials changed
 const seedDefaultAdmin = async () => {
   try {
-    const [rows] = await getPromisePool().query('SELECT COUNT(*) AS cnt FROM admins');
-    const exists = rows && rows[0] && rows[0].cnt > 0;
+    const username = process.env.ADMIN_USERNAME || 'admin';
+    const password = process.env.ADMIN_PASSWORD || 'admin123';
+    const hash = await bcrypt.hash(password, 10);
+    
+    const [rows] = await getPromisePool().query('SELECT admin_id FROM admins LIMIT 1');
+    const exists = rows && rows.length > 0;
+    
     if (!exists) {
-      const username = process.env.ADMIN_USERNAME || 'admin';
-      const password = process.env.ADMIN_PASSWORD || 'admin123';
-      const hash = await bcrypt.hash(password, 10);
+      // No admin exists, create one
       await getPromisePool().query(
         'INSERT INTO admins (username, password_hash, role) VALUES (?, ?, ?)',
         [username, hash, 'admin']
       );
       console.log('Default admin user created.');
+    } else {
+      // Admin exists, update credentials to match environment variables
+      await getPromisePool().query(
+        'UPDATE admins SET username = ?, password_hash = ? WHERE admin_id = ?',
+        [username, hash, rows[0].admin_id]
+      );
+      console.log('Admin credentials synced with environment variables.');
     }
   } catch (err) {
-    console.error('Failed to seed admin user:', err.message);
+    console.error('Failed to seed/update admin user:', err.message);
   }
 };
 
