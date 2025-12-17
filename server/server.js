@@ -13,8 +13,30 @@ const app = express();
 
 // Middleware
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: (origin, callback) => {
+    const allowedOrigin = process.env.CORS_ORIGIN || '*';
+    
+    // If wildcard, allow all origins
+    if (allowedOrigin === '*') {
+      return callback(null, true);
+    }
+    
+    // Remove trailing slash from configured origin for comparison
+    const normalizedAllowedOrigin = allowedOrigin.replace(/\/$/, '');
+    // Remove trailing slash from request origin for comparison
+    const normalizedOrigin = origin ? origin.replace(/\/$/, '') : '';
+    
+    // Check if origins match (both normalized)
+    if (normalizedOrigin === normalizedAllowedOrigin) {
+      // Return the exact origin from the request (without trailing slash)
+      callback(null, normalizedOrigin);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
