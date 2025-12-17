@@ -195,21 +195,27 @@ const formBodyStyle = {
 const dmsToDecimal = (dmsString) => {
   if (!dmsString) return null;
   
+  // Remove extra spaces for easier parsing
+  const cleanStr = String(dmsString).trim();
+  
   // Match DMS format: 7°15'20.4"N or 126°20'36.5"E
-  const regex = /([0-9.]+)[°\s]+([0-9.]+)?['\s]*([0-9.]+)?["\s]*([NSEW])?/i;
-  const match = dmsString.match(regex);
+  // This regex properly captures degrees, minutes, seconds, and direction
+  const regex = /([0-9.]+)\s*°\s*([0-9.]+)?\s*'?\s*([0-9.]+)?\s*"?\s*([NSEW])?/i;
+  const match = cleanStr.match(regex);
   
   if (!match) return null;
   
-  let degrees = parseFloat(match[1] || 0);
-  let minutes = parseFloat(match[2] || 0);
-  let seconds = parseFloat(match[3] || 0);
-  let direction = match[4] || '';
+  // Parse components with proper fallback to 0
+  const degrees = parseFloat(match[1] || 0);
+  const minutes = match[2] ? parseFloat(match[2]) : 0;
+  const seconds = match[3] ? parseFloat(match[3]) : 0;
+  const direction = (match[4] || '').toUpperCase();
   
+  // Calculate decimal degrees
   let decimal = degrees + minutes / 60 + seconds / 3600;
   
-  // Apply direction
-  if (direction.toUpperCase() === 'S' || direction.toUpperCase() === 'W') {
+  // Apply direction (S and W are negative)
+  if (direction === 'S' || direction === 'W') {
     decimal *= -1;
   }
   
