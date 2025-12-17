@@ -7,7 +7,8 @@ export default defineConfig({
   plugins: [react()],
   root: 'admin', // Set root to admin folder
   build: {
-    outDir: '../../dist/admin', // Output to separate admin build folder
+    outDir: '../dist/admin', // Output to dist/admin within client folder
+    emptyOutDir: true,
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'admin/index.html')

@@ -1,0 +1,13 @@
+{
+  "buildCommand": "npm run build:admin",
+  "outputDirectory": "dist/admin",
+  "devCommand": "npm run dev:admin",
+  "installCommand": "npm install",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
