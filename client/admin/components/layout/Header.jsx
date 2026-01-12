@@ -53,8 +53,8 @@ const Header = () => {
   // Main title styling
   const titleStyles = {
     fontWeight: 800, 
-    fontSize: '1.1rem',
-    letterSpacing: '0.1px',
+    fontSize: '1.3rem',
+    letterSpacing: '0.01px',
     fontFamily: 'var(--font-main)',
     color: 'var(--dark-green)',
     lineHeight: '1.3'
@@ -115,9 +115,6 @@ const Header = () => {
         <div style={brandingTextStyles}>
           <span style={titleStyles}>
             Coffee Crop Monitoring System
-          </span>
-          <span style={subtitleStyles}>
-            Taocanga, Manay, Davao Oriental
           </span>
         </div>
       </div>
