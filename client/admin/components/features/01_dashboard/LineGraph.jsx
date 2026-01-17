@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { statisticsAPI } from '../../../services/api';
+import { statisticsAPI, beneficiariesAPI } from '../../../services/api';
+import { HiMagnifyingGlass } from 'react-icons/hi2';
 
 const LineGraph = ({ active }) => {
   const [chartData, setChartData] = useState([]);
@@ -9,27 +10,77 @@ const LineGraph = ({ active }) => {
   // Filter states for user-controlled chart display
   const [timePeriod, setTimePeriod] = useState('monthly'); // 'yearly', 'monthly', 'weekly'
   const [dataFilter, setDataFilter] = useState('all'); // 'all', 'alive', 'dead', 'seedlings'
+  // Beneficiary filter states
+  const [beneficiaries, setBeneficiaries] = useState([]);
+  const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
 
-  const fetchChartData = async () => {
+  const fetchBeneficiaries = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      const data = await statisticsAPI.getChartData();
-      setChartData(data);
+      const data = await beneficiariesAPI.getAll();
+      setBeneficiaries(data || []);
     } catch (err) {
-      console.error('Error fetching chart data:', err);
-      setError('Failed to load chart data');
-    } finally {
-      setLoading(false);
+      console.error('Error fetching beneficiaries:', err);
     }
   };
 
-  // Fetch chart data when Dashboard becomes active
+  // Fetch chart data when Dashboard becomes active or beneficiary changes
   useEffect(() => {
+    const fetchChartData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const beneficiaryId = selectedBeneficiary?.id || null;
+        const data = await statisticsAPI.getChartData(beneficiaryId);
+        setChartData(data);
+      } catch (err) {
+        console.error('Error fetching chart data:', err);
+        setError('Failed to load chart data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (active === 'Dashboard' || active) {
       fetchChartData();
+      fetchBeneficiaries();
     }
-  }, [active]);
+  }, [active, selectedBeneficiary]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDropdown && !event.target.closest('[data-beneficiary-search]')) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown]);
+
+  // Filter beneficiaries based on search term
+  const filteredBeneficiaries = beneficiaries.filter(beneficiary => {
+    const fullName = `${beneficiary.firstName || ''} ${beneficiary.middleName || ''} ${beneficiary.lastName || ''}`.toLowerCase();
+    const beneficiaryId = beneficiary.beneficiaryId?.toLowerCase() || '';
+    const search = searchTerm.toLowerCase();
+    return fullName.includes(search) || beneficiaryId.includes(search);
+  });
+
+  const handleBeneficiarySelect = (beneficiary) => {
+    setSelectedBeneficiary(beneficiary);
+    setSearchTerm(beneficiary ? `${beneficiary.firstName} ${beneficiary.lastName} (${beneficiary.beneficiaryId})` : '');
+    setShowDropdown(false);
+  };
+
+  const handleClearFilter = () => {
+    setSelectedBeneficiary(null);
+    setSearchTerm('');
+    setShowDropdown(false);
+  };
 
   if (loading) {
     return (
@@ -77,64 +128,221 @@ const LineGraph = ({ active }) => {
       flexDirection: 'column'
     }}>
       <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
         marginBottom: '0.75rem' 
       }}>
-        <h3 style={{ 
-          color: 'var(--dark-green)', 
-          fontSize: '0.9rem', 
-          fontWeight: 600, 
-          margin: 0 
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          gap: '0.5rem',
+          flexWrap: 'wrap'
         }}>
-          Trend Monitoring
-        </h3>
-        
-        {/* Filter Dropdowns */}
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {/* Time Period Filter */}
-          <select
-            value={timePeriod}
-            onChange={(e) => setTimePeriod(e.target.value)}
-            style={{
-              padding: '0.4rem 0.6rem',
-              fontSize: '0.75rem',
-              color: 'var(--dark-green)',
-              backgroundColor: 'var(--white)',
-              border: '1px solid var(--border-gray)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              outline: 'none',
-              fontFamily: 'var(--font-main)'
-            }}
-          >
-            <option value="yearly">Yearly</option>
-            <option value="monthly">Monthly</option>
-            <option value="weekly">Weekly</option>
-          </select>
+          <h3 style={{ 
+            color: 'var(--dark-green)', 
+            fontSize: '0.9rem', 
+            fontWeight: 600, 
+            margin: 0 
+          }}>
+            Trend Monitoring
+          </h3>
 
-          {/* Data Filter */}
-          <select
-            value={dataFilter}
-            onChange={(e) => setDataFilter(e.target.value)}
-            style={{
-              padding: '0.4rem 0.6rem',
-              fontSize: '0.75rem',
-              color: 'var(--dark-green)',
-              backgroundColor: 'var(--white)',
-              border: '1px solid var(--border-gray)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              outline: 'none',
-              fontFamily: 'var(--font-main)'
-            }}
-          >
-            <option value="all">All Data</option>
-            <option value="seedlings">Seedlings Only</option>
-            <option value="alive">Alive Crops Only</option>
-            <option value="dead">Dead Crops Only</option>
-          </select>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            gap: '0.5rem',
+            flex: 1,
+            justifyContent: 'flex-end'
+          }}>
+            {/* Beneficiary Search Bar */}
+            <div style={{ position: 'relative' }} data-beneficiary-search>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                position: 'relative',
+                minWidth: '270px'
+              }}>
+                <HiMagnifyingGlass style={{
+                  position: 'absolute',
+                  left: '0.5rem',
+                  fontSize: '0.9rem',
+                  color: 'var(--text-gray)',
+                  pointerEvents: 'none'
+                }} />
+                <input
+                  type="text"
+                  placeholder="Search beneficiary..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setShowDropdown(true);
+                    if (!e.target.value && selectedBeneficiary) {
+                      setSelectedBeneficiary(null);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (filteredBeneficiaries.length > 0) {
+                        handleBeneficiarySelect(filteredBeneficiaries[0]);
+                      }
+                    }
+                  }}
+                  onFocus={() => setShowDropdown(true)}
+                  style={{
+                    width: '270px',
+                    padding: '0.4rem 2rem 0.4rem 2rem',
+                    fontSize: '0.75rem',
+                    color: 'var(--dark-green)',
+                    backgroundColor: 'var(--white)',
+                    border: '1px solid var(--border-gray)',
+                    borderRadius: '4px',
+                    outline: 'none',
+                    fontFamily: 'var(--font-main)'
+                  }}
+                />
+                {(selectedBeneficiary || searchTerm) && (
+                  <button
+                    onClick={handleClearFilter}
+                    style={{
+                      position: 'absolute',
+                      right: '0.5rem',
+                      padding: '0.2rem',
+                      fontSize: '0.75rem',
+                      color: 'var(--text-gray)',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '3px',
+                      cursor: 'pointer',
+                      outline: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '20px',
+                      height: '20px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = 'var(--light-gray)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Dropdown List */}
+              {showDropdown && searchTerm && filteredBeneficiaries.length > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '0.25rem',
+                  backgroundColor: 'var(--white)',
+                  border: '1px solid var(--border-gray)',
+                  borderRadius: '4px',
+                  boxShadow: '0 4px 12px var(--shadow-subtle)',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  zIndex: 1000,
+                  minWidth: '200px'
+                }}>
+                  {filteredBeneficiaries.map((beneficiary) => (
+                    <div
+                      key={beneficiary.id}
+                      onClick={() => handleBeneficiarySelect(beneficiary)}
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        fontSize: '0.75rem',
+                        color: 'var(--dark-text)',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid var(--light-gray)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = 'var(--mint-green)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <div style={{ fontWeight: 500 }}>
+                        {beneficiary.firstName} {beneficiary.lastName}
+                      </div>
+                      <div style={{ fontSize: '0.65rem', color: 'var(--text-gray)' }}>
+                        {beneficiary.beneficiaryId}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* No results message */}
+              {showDropdown && searchTerm && filteredBeneficiaries.length === 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '0.25rem',
+                  padding: '0.5rem 0.75rem',
+                  backgroundColor: 'var(--white)',
+                  border: '1px solid var(--border-gray)',
+                  borderRadius: '4px',
+                  boxShadow: '0 4px 12px var(--shadow-subtle)',
+                  fontSize: '0.75rem',
+                  color: 'var(--text-gray)',
+                  zIndex: 1000,
+                  minWidth: '200px'
+                }}>
+                  No beneficiaries found
+                </div>
+              )}
+            </div>
+
+            {/* Filter Dropdowns */}
+            {/* Time Period Filter */}
+            <select
+              value={timePeriod}
+              onChange={(e) => setTimePeriod(e.target.value)}
+              style={{
+                padding: '0.4rem 0.6rem',
+                fontSize: '0.75rem',
+                color: 'var(--dark-green)',
+                backgroundColor: 'var(--white)',
+                border: '1px solid var(--border-gray)',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                outline: 'none',
+                fontFamily: 'var(--font-main)'
+              }}
+            >
+              <option value="yearly">Yearly</option>
+              <option value="monthly">Monthly</option>
+              <option value="weekly">Weekly</option>
+            </select>
+
+            {/* Data Filter */}
+            <select
+              value={dataFilter}
+              onChange={(e) => setDataFilter(e.target.value)}
+              style={{
+                padding: '0.4rem 0.6rem',
+                fontSize: '0.75rem',
+                color: 'var(--dark-green)',
+                backgroundColor: 'var(--white)',
+                border: '1px solid var(--border-gray)',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                outline: 'none',
+                fontFamily: 'var(--font-main)'
+              }}
+            >
+              <option value="all">All Data</option>
+              <option value="seedlings">Seedlings Only</option>
+              <option value="alive">Alive Crops Only</option>
+              <option value="dead">Dead Crops Only</option>
+            </select>
+          </div>
         </div>
       </div>
       

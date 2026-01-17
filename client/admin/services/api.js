@@ -308,7 +308,12 @@ export const addressesAPI = {
 // Statistics API
 export const statisticsAPI = {
   getDashboardStats: async () => apiRequest('/statistics'),
-  getChartData: async () => apiRequest('/statistics/chart-data'),
+  getChartData: async (beneficiaryId = null) => {
+    const url = beneficiaryId 
+      ? `/statistics/chart-data?beneficiaryId=${beneficiaryId}`
+      : '/statistics/chart-data';
+    return apiRequest(url);
+  },
   getRecentActivities: async (limit = 10) => apiRequest(`/statistics/recent-activities?limit=${limit}`)
 };
 

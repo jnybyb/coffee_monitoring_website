@@ -34,46 +34,92 @@ class Statistics {
     }
   }
 
-  static async getChartData() {
+  static async getChartData(beneficiaryId = null) {
     try {
       // Get monthly data for the last 12 months
       const twelveMonthsAgo = new Date();
       twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
       const startDate = twelveMonthsAgo.toISOString().split('T')[0];
 
-      // Get monthly beneficiaries count
-      const beneficiariesResult = await getPromisePool().query(`
-        SELECT 
-          DATE_FORMAT(created_at, '%Y-%m') as month,
-          COUNT(*) as count
-        FROM beneficiaries 
-        WHERE created_at >= ?
-        GROUP BY DATE_FORMAT(created_at, '%Y-%m')
-        ORDER BY month
-      `, [startDate]);
+      // Build beneficiary filter condition
+      const beneficiaryFilter = beneficiaryId 
+        ? `AND beneficiary_id = (SELECT beneficiary_id FROM beneficiaries WHERE id = ?)`
+        : '';
+      const beneficiaryParams = beneficiaryId ? [beneficiaryId] : [];
+
+      // Get monthly beneficiaries count (only if filtering by beneficiary, otherwise show 1 if exists)
+      let beneficiariesQuery;
+      if (beneficiaryId) {
+        beneficiariesQuery = `
+          SELECT 
+            DATE_FORMAT(created_at, '%Y-%m') as month,
+            1 as count
+          FROM beneficiaries 
+          WHERE created_at >= ? AND id = ?
+          GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+          ORDER BY month
+        `;
+      } else {
+        beneficiariesQuery = `
+          SELECT 
+            DATE_FORMAT(created_at, '%Y-%m') as month,
+            COUNT(*) as count
+          FROM beneficiaries 
+          WHERE created_at >= ?
+          GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+          ORDER BY month
+        `;
+      }
+      const beneficiariesParams = beneficiaryId 
+        ? [startDate, beneficiaryId]
+        : [startDate];
+      const beneficiariesResult = await getPromisePool().query(beneficiariesQuery, beneficiariesParams);
 
       // Get monthly seedlings distributed
-      const seedlingsResult = await getPromisePool().query(`
+      const seedlingsQuery = `
         SELECT 
           DATE_FORMAT(date_received, '%Y-%m') as month,
           SUM(received_seedling) as count
         FROM coffee_seedlings 
-        WHERE date_received >= ?
+        WHERE date_received >= ? ${beneficiaryFilter}
         GROUP BY DATE_FORMAT(date_received, '%Y-%m')
         ORDER BY month
-      `, [startDate]);
+      `;
+      const seedlingsParams = beneficiaryId 
+        ? [startDate, ...beneficiaryParams]
+        : [startDate];
+      const seedlingsResult = await getPromisePool().query(seedlingsQuery, seedlingsParams);
 
-      // Get monthly crop status data
-      const cropsResult = await getPromisePool().query(`
-        SELECT 
-          DATE_FORMAT(survey_date, '%Y-%m') as month,
-          SUM(alive_crops) as alive_count,
-          SUM(dead_crops) as dead_count
-        FROM crop_survey_status 
-        WHERE survey_date >= ?
-        GROUP BY DATE_FORMAT(survey_date, '%Y-%m')
-        ORDER BY month
-      `, [startDate]);
+      // Get monthly crop status data (filter directly by beneficiary using beneficiary_id)
+      let cropsQuery;
+      let cropsParams;
+      if (beneficiaryId) {
+        cropsQuery = `
+          SELECT 
+            DATE_FORMAT(css.survey_date, '%Y-%m') as month,
+            SUM(css.alive_crops) as alive_count,
+            SUM(css.dead_crops) as dead_count
+          FROM crop_survey_status css
+          WHERE css.survey_date >= ?
+            AND css.beneficiary_id = (SELECT beneficiary_id FROM beneficiaries WHERE id = ?)
+          GROUP BY DATE_FORMAT(css.survey_date, '%Y-%m')
+          ORDER BY month
+        `;
+        cropsParams = [startDate, beneficiaryId];
+      } else {
+        cropsQuery = `
+          SELECT 
+            DATE_FORMAT(survey_date, '%Y-%m') as month,
+            SUM(alive_crops) as alive_count,
+            SUM(dead_crops) as dead_count
+          FROM crop_survey_status 
+          WHERE survey_date >= ?
+          GROUP BY DATE_FORMAT(survey_date, '%Y-%m')
+          ORDER BY month
+        `;
+        cropsParams = [startDate];
+      }
+      const cropsResult = await getPromisePool().query(cropsQuery, cropsParams);
 
       // Create a map of all months in the last 12 months
       const monthMap = new Map();

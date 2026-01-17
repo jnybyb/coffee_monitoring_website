@@ -15,7 +15,8 @@ class StatisticsController {
   // Get chart data for line graph
   static async getChartData(req, res) {
     try {
-      const chartData = await Statistics.getChartData();
+      const beneficiaryId = req.query.beneficiaryId || null;
+      const chartData = await Statistics.getChartData(beneficiaryId);
       res.json(chartData);
     } catch (error) {
       console.error('Error fetching chart data:', error);
