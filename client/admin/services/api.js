@@ -243,13 +243,14 @@ export const cropStatusAPI = {
   getById: async (id) => apiRequest(`/crop-status/${id}`),
   create: async (record) => {
     const formData = new FormData();
+    const plotId = record.plotId ?? record.plot ?? null;
     formData.append('surveyDate', record.surveyDate);
     formData.append('surveyer', record.surveyer);
     formData.append('beneficiaryId', record.beneficiaryId);
     formData.append('aliveCrops', record.aliveCrops);
     formData.append('deadCrops', record.deadCrops ?? 0);
-    if (record.plot !== undefined && record.plot !== null) {
-      formData.append('plot', record.plot);
+    if (plotId !== undefined && plotId !== null && plotId !== '') {
+      formData.append('plotId', plotId);
     }
     if (Array.isArray(record.pictures)) {
       record.pictures.forEach(file => {
@@ -260,13 +261,14 @@ export const cropStatusAPI = {
   },
   update: async (id, record) => {
     const formData = new FormData();
+    const plotId = record.plotId ?? record.plot ?? null;
     formData.append('surveyDate', record.surveyDate);
     formData.append('surveyer', record.surveyer);
     formData.append('beneficiaryId', record.beneficiaryId);
     formData.append('aliveCrops', record.aliveCrops);
     formData.append('deadCrops', record.deadCrops ?? 0);
-    if (record.plot !== undefined && record.plot !== null) {
-      formData.append('plot', record.plot);
+    if (plotId !== undefined && plotId !== null && plotId !== '') {
+      formData.append('plotId', plotId);
     }
     
     // Handle existing pictures for edit mode

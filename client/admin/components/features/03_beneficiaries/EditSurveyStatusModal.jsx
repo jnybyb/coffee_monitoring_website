@@ -3,7 +3,7 @@ import { CancelButton, SaveButton } from '../../ui/BeneficiaryButtons';
 import { BeneficiaryCard } from '../../ui/FormFields';
 import LoadingModal from '../../ui/LoadingModal';
 import AlertModal from '../../ui/AlertModal';
-import { cropStatusAPI, farmPlotsAPI } from '../../../services/api';
+import { cropStatusAPI, farmPlotsAPI, seedlingsAPI } from '../../../services/api';
 
 // Shared styles constants
 const MODAL_STYLES = {
@@ -143,6 +143,7 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [plots, setPlots] = useState([]);
   const [plotsLoading, setPlotsLoading] = useState(false);
+  const [minSurveyDate, setMinSurveyDate] = useState('');
   const [originalFormData, setOriginalFormData] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [showSaveLoading, setShowSaveLoading] = useState(false);
@@ -192,6 +193,40 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
     fetchPlots();
   }, [formData.beneficiaryId]);
 
+  useEffect(() => {
+    const fetchSeedlings = async () => {
+      if (formData.beneficiaryId) {
+        try {
+          const allSeedlings = await seedlingsAPI.getAll();
+          const beneficiarySeedlings = allSeedlings.filter(
+            s => s.beneficiaryId === formData.beneficiaryId
+          );
+          const releaseDates = beneficiarySeedlings
+            .map(s => s.dateReceived)
+            .filter(Boolean)
+            .map(d => d.split('T')[0]);
+
+          if (releaseDates.length > 0) {
+            const earliest = releaseDates.reduce(
+              (min, d) => (d < min ? d : min),
+              releaseDates[0]
+            );
+            setMinSurveyDate(earliest);
+          } else {
+            setMinSurveyDate('');
+          }
+        } catch (error) {
+          console.error('Error fetching seedlings:', error);
+          setMinSurveyDate('');
+        }
+      } else {
+        setMinSurveyDate('');
+      }
+    };
+
+    fetchSeedlings();
+  }, [formData.beneficiaryId]);
+
   // Pre-populate form with record data when editing, parsing ISO dates without timezone conversion
   useEffect(() => {
     if (record && isOpen) {
@@ -204,7 +239,7 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
         beneficiaryPicture: record.beneficiaryPicture || '',
         aliveCrops: record.aliveCrops?.toString() || '',
         deadCrops: record.deadCrops?.toString() || '0',
-        plotId: record.plotId || '',
+        plotId: record.plotId || record.plot || '',
         pictures: record.pictures || []
       };
       
@@ -246,7 +281,15 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
   const validateForm = () => {
     const newErrors = {};
     // Required fields: survey date, surveyer, beneficiary, and record ID for edit operations
-    if (!formData.surveyDate) newErrors.surveyDate = 'Survey date is required';
+    if (!formData.surveyDate) {
+      newErrors.surveyDate = 'Survey date is required';
+    } else if (minSurveyDate) {
+      const surveyDateObj = new Date(formData.surveyDate);
+      const minSurveyDateObj = new Date(minSurveyDate);
+      if (!isNaN(surveyDateObj.getTime()) && !isNaN(minSurveyDateObj.getTime()) && surveyDateObj < minSurveyDateObj) {
+        newErrors.surveyDate = 'Survey date cannot be before the first seedling release date';
+      }
+    }
     if (!formData.surveyer) newErrors.surveyer = 'Surveyer name is required';
     if (!formData.beneficiaryName) newErrors.beneficiaryName = 'Beneficiary is required';
     if (!formData.id) newErrors.id = 'Record ID is required for updates';
@@ -291,8 +334,10 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
     if (!validateForm()) return;
     
     try {
+      const selectedPlotId = formData.plotId ? formData.plotId : null;
       const submitData = { 
-        ...formData, 
+        ...formData,
+        plotId: selectedPlotId,
         aliveCrops: parseInt(formData.aliveCrops), 
         deadCrops: parseInt(formData.deadCrops || 0) 
       };
@@ -393,6 +438,7 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
                   name="surveyDate"
                   value={formData.surveyDate}
                   onChange={handleInputChange}
+                  min={minSurveyDate}
                   style={getDateInputStyle(errors.surveyDate, formData.surveyDate)}
                   placeholder="Select date"
                 />
@@ -512,7 +558,7 @@ const EditCropStatusModal = ({ isOpen, onClose, onSubmit, record }) => {
                     );
                   })}
                   {selectedFiles.length < 10 && (
-                    <label htmlFor="edit-crop-pictures-input" style={{ cursor: 'pointer', display: 'block', paddingBottom: '100%', position: 'relative', backgroundColor: 'var(--white)', border: '1px dashed var(--gray)', borderRadius: '6px', color: 'var(--placeholder-text)', fontSize: '13px' }}>
+                    <label htmlFor="edit-crop-pictures-input" style={{ cursor: 'pointer', display: 'block', paddingBottom: '100%', position: 'relative', backgroundColor: 'var(--white)', border: '1.5px dashed var(--dark-green)', borderRadius: '6px', color: 'var(--dark-green)', fontSize: '13px' }}>
                       <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>+ Add</span>
                     </label>
                   )}

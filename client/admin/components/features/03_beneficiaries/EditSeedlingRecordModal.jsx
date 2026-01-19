@@ -259,7 +259,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
         received: record.received?.toString() || '',
         dateReceived: record.dateReceived ? new Date(record.dateReceived).toISOString().split('T')[0] : '',
         planted: record.planted?.toString() || '',
-        plot: record.plot || '',
+        plot: record.plotId || record.plot || '',
         // Handle both dateOfPlantingStart and legacy dateOfPlanting field
         dateOfPlantingStart: record.dateOfPlantingStart ? new Date(record.dateOfPlantingStart).toISOString().split('T')[0] : (record.dateOfPlanting ? new Date(record.dateOfPlanting).toISOString().split('T')[0] : ''),
         dateOfPlantingEnd: record.dateOfPlantingEnd ? new Date(record.dateOfPlantingEnd).toISOString().split('T')[0] : ''
@@ -312,6 +312,8 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
     }
     if (!formData.dateOfPlantingStart) {
       newErrors.dateOfPlantingStart = 'Date of planting (start) is required';
+    } else if (formData.dateReceived && formData.dateOfPlantingStart < formData.dateReceived) {
+      newErrors.dateOfPlantingStart = 'Date of planting cannot be before date received';
     }
     // Ensure date range is valid: end date cannot be before start date
     if (formData.dateOfPlantingEnd && formData.dateOfPlantingStart) {
@@ -607,6 +609,7 @@ const EditSeedlingRecordModal = ({ isOpen, onClose, onSubmit, record = null }) =
                     style={getDateInputStyle(errors.dateOfPlantingStart, formData.dateOfPlantingStart)}
                     disabled={loading}
                     placeholder="Start date"
+                    min={formData.dateReceived}
                   />
                   {errors.dateOfPlantingStart && (
                     <span style={FIELD_STYLES.error}>{errors.dateOfPlantingStart}</span>

@@ -3,7 +3,7 @@ import { CancelButton, SaveButton } from '../../ui/BeneficiaryButtons';
 import { BeneficiaryCard } from '../../ui/FormFields';
 import LoadingModal from '../../ui/LoadingModal';
 import AlertModal from '../../ui/AlertModal';
-import { cropStatusAPI, farmPlotsAPI } from '../../../services/api';
+import { cropStatusAPI, farmPlotsAPI, seedlingsAPI } from '../../../services/api';
 
 // Shared styles constants
 const MODAL_STYLES = {
@@ -154,6 +154,8 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
   const [beneficiariesLoading, setBeneficiariesLoading] = useState(false);
   const [plots, setPlots] = useState([]);
   const [plotsLoading, setPlotsLoading] = useState(false);
+  const [maxSeedlings, setMaxSeedlings] = useState(0);
+  const [minSurveyDate, setMinSurveyDate] = useState('');
   const [showSaveLoading, setShowSaveLoading] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   const [showSaveError, setShowSaveError] = useState(false);
@@ -183,6 +185,51 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
     };
 
     fetchPlots();
+  }, [formData.beneficiaryId]);
+
+  // Fetch seedlings to determine the max limit for alive crops and earliest survey date
+  useEffect(() => {
+    const fetchSeedlings = async () => {
+      if (formData.beneficiaryId) {
+        try {
+          const allSeedlings = await seedlingsAPI.getAll();
+          const beneficiarySeedlings = allSeedlings.filter(
+            s => s.beneficiaryId === formData.beneficiaryId
+          );
+          // Calculate total received seedlings
+          const totalReceived = beneficiarySeedlings.reduce(
+            (sum, s) => sum + (parseInt(s.received) || 0), 
+            0
+          );
+          setMaxSeedlings(totalReceived);
+
+          // Determine earliest seedling release date to use as minimum survey date
+          const releaseDates = beneficiarySeedlings
+            .map(s => s.dateReceived)
+            .filter(Boolean)
+            .map(d => d.split('T')[0]);
+
+          if (releaseDates.length > 0) {
+            const earliest = releaseDates.reduce(
+              (min, d) => (d < min ? d : min),
+              releaseDates[0]
+            );
+            setMinSurveyDate(earliest);
+          } else {
+            setMinSurveyDate('');
+          }
+        } catch (error) {
+          console.error('Error fetching seedlings:', error);
+          setMaxSeedlings(0);
+          setMinSurveyDate('');
+        }
+      } else {
+        setMaxSeedlings(0);
+        setMinSurveyDate('');
+      }
+    };
+
+    fetchSeedlings();
   }, [formData.beneficiaryId]);
 
   // Fetch all beneficiaries from database when modal opens for dropdown population
@@ -234,7 +281,7 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
         beneficiaryPicture: record.beneficiaryPicture || '',
         aliveCrops: record.aliveCrops?.toString() || '',
         deadCrops: record.deadCrops?.toString() || '0',
-        plotId: record.plotId || '',
+        plotId: record.plotId || record.plot || '',
         pictures: record.pictures || []
       });
       
@@ -278,12 +325,34 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.surveyDate) newErrors.surveyDate = 'Survey date is required';
+    if (!formData.surveyDate) {
+      newErrors.surveyDate = 'Survey date is required';
+    } else if (minSurveyDate) {
+      const surveyDateObj = new Date(formData.surveyDate);
+      const minSurveyDateObj = new Date(minSurveyDate);
+      if (!isNaN(surveyDateObj.getTime()) && !isNaN(minSurveyDateObj.getTime()) && surveyDateObj < minSurveyDateObj) {
+        newErrors.surveyDate = 'Survey date cannot be before the first seedling release date';
+      }
+    }
     if (!formData.surveyer) newErrors.surveyer = 'Surveyer name is required';
     if (!formData.beneficiaryName) newErrors.beneficiaryName = 'Beneficiary is required';
     if (isEdit && !formData.id) newErrors.id = 'Record ID is required for updates';
-    if (!formData.aliveCrops || formData.aliveCrops <= 0) newErrors.aliveCrops = 'Number of alive crops must be greater than 0';
-    if (formData.deadCrops === '' || formData.deadCrops < 0) newErrors.deadCrops = 'Number of dead crops cannot be negative';
+    if (!formData.aliveCrops || formData.aliveCrops <= 0) {
+      newErrors.aliveCrops = 'Number of alive crops must be greater than 0';
+    }
+    
+    if (formData.deadCrops === '' || formData.deadCrops < 0) {
+      newErrors.deadCrops = 'Number of dead crops cannot be negative';
+    }
+
+    if (!newErrors.aliveCrops && !newErrors.deadCrops) {
+      const totalCrops = (parseInt(formData.aliveCrops) || 0) + (parseInt(formData.deadCrops) || 0);
+      if (totalCrops > maxSeedlings) {
+        const errorMsg = `The total alive(${formData.aliveCrops}) and dead(${formData.deadCrops}) crops exceeds the given seedling`;
+        newErrors.aliveCrops = errorMsg;
+        newErrors.deadCrops = errorMsg;
+      }
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -337,8 +406,10 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
     if (!validateForm()) return;
     
     try {
+      const selectedPlotId = formData.plotId ? formData.plotId : null;
       const submitData = { 
-        ...formData, 
+        ...formData,
+        plotId: selectedPlotId,
         aliveCrops: parseInt(formData.aliveCrops), 
         deadCrops: parseInt(formData.deadCrops || 0) 
       };
@@ -479,6 +550,7 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
                   name="surveyDate"
                   value={formData.surveyDate}
                   onChange={handleInputChange}
+                  min={minSurveyDate}
                   style={getDateInputStyle(errors.surveyDate, formData.surveyDate)}
                   placeholder="Select date"
                 />
@@ -518,8 +590,9 @@ const AddSurveyStatusModal = ({ isOpen, onClose, onSubmit, record, isEdit = fals
                   value={formData.aliveCrops}
                   onChange={handleInputChange}
                   min="1"
+                  max={maxSeedlings}
                   style={getInputStyle(errors.aliveCrops)}
-                  placeholder="Enter number"
+                  placeholder={`Enter number (Max: ${maxSeedlings})`}
                 />
                 {errors.aliveCrops && (
                   <span style={FIELD_STYLES.error}>

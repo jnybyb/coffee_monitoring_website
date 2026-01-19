@@ -800,7 +800,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
                           <InfoRow label="Received" value={record.received ? record.received.toLocaleString() : '-'} />
                           <InfoRow label="Date Received" value={formatDate(record.dateReceived)} />
                           <InfoRow label="Planted" value={record.planted ? record.planted.toLocaleString() : '-'} />
-                          <InfoRow label="Plot ID" value={record.plotId || '-'} />
+                          <InfoRow label="Plot ID" value={record.plotId || record.plot || '-'} />
                           <InfoRow label="Planting Start" value={formatDate(record.dateOfPlantingStart)} />
                           <InfoRow label="Planting End" value={formatDate(record.dateOfPlantingEnd)} />
                         </div>
@@ -965,7 +965,7 @@ const DetailContainer = ({ selectedBeneficiary, onClose }) => {
                           <InfoRow label="Surveyer" value={record.surveyer || '-'} />
                           <InfoRow label="Alive Crops" value={record.aliveCrops ? record.aliveCrops.toLocaleString() : '-'} />
                           <InfoRow label="Dead Crops" value={record.deadCrops !== undefined ? record.deadCrops.toLocaleString() : '-'} />
-                          <InfoRow label="Plot" value={record.plot || '-'} />
+                          <InfoRow label="Plot" value={record.plotId || record.plot || '-'} />
                           
                           {/* Pictures Section */}
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.6rem' }}>

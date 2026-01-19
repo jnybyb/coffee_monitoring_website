@@ -277,6 +277,8 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
     // Validate date of planting
     if (!formData.dateOfPlantingStart) {
       newErrors.dateOfPlantingStart = 'Date of planting (start) is required';
+    } else if (formData.dateReceived && formData.dateOfPlantingStart < formData.dateReceived) {
+      newErrors.dateOfPlantingStart = 'Date of planting cannot be before date received';
     }
     
     // Validate planting date range: end date must be after start date
@@ -584,6 +586,7 @@ const AddSeedlingRecordModal = ({ isOpen, onClose, onSubmit, selectedBeneficiary
                     style={getDateInputStyle(errors.dateOfPlantingStart, formData.dateOfPlantingStart)}
                     disabled={loading}
                     placeholder="Start date"
+                    min={formData.dateReceived}
                   />
                   {errors.dateOfPlantingStart && (
                     <span style={FIELD_STYLES.error}>
