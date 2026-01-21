@@ -31,7 +31,6 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
     resetBarangays
   } = useAddressData();
 
-  // Reset form and load default municipality options for Davao Oriental when modal opens
   useEffect(() => {
     if (isOpen) {
       setFormData(INITIAL_BENEFICIARY_FORM_DATA);
@@ -39,7 +38,6 @@ const AddRecord = ({ isOpen, onClose, onSubmit }) => {
       setSubmitting(false);
       setSubmitError('');
       setShowSuccessModal(false);
-      loadMunicipalities('Davao Oriental');
     }
   }, [isOpen, loadMunicipalities]);
 

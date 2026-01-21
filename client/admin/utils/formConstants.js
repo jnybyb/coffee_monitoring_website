@@ -22,7 +22,7 @@ export const INITIAL_BENEFICIARY_FORM_DATA = {
   purok: '',
   barangay: '',
   municipality: '',
-  province: 'Davao Oriental',
+  province: '',
   gender: '',
   birthDate: '',
   maritalStatus: '',

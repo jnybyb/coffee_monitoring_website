@@ -65,54 +65,71 @@ class AddressController {
   // Sync all Philippine address data from external API
   static async syncAllAddresses(req, res) {
     try {
-      // Fetch provinces
-      const provincesData = await AddressController.fetchWithRetry('https://psgc.cloud/api/provinces');
-      
-      // Group data by province
+      const provincesData = await AddressController.fetchWithRetry('https://psgc.cloud/api/v2/provinces');
+      const citiesMunicipalitiesData = await AddressController.fetchWithRetry('https://psgc.cloud/api/v2/cities-municipalities');
+      const barangaysData = await AddressController.fetchWithRetry('https://psgc.cloud/api/v2/barangays');
+
       const provinceMap = {};
-      let processedProvinces = 0;
-      
-      // Process each province
+
+      // Index barangays by province + city/municipality name
+      const barangaysMap = new Map();
+      for (const barangay of barangaysData) {
+        const provinceName = barangay.province && barangay.province.name ? barangay.province.name : barangay.province;
+        const cityMunicipalityName =
+          barangay.city_municipality && barangay.city_municipality.name
+            ? barangay.city_municipality.name
+            : barangay.city_municipality;
+
+        if (!provinceName || !cityMunicipalityName || !barangay.name) continue;
+
+        const key = `${provinceName}|||${cityMunicipalityName}`;
+        if (!barangaysMap.has(key)) {
+          barangaysMap.set(key, []);
+        }
+        barangaysMap.get(key).push(barangay.name);
+      }
+
+      // Sort barangay names for each municipality
+      for (const [key, list] of barangaysMap.entries()) {
+        list.sort((a, b) => a.localeCompare(b));
+        barangaysMap.set(key, list);
+      }
+
+      // Initialize provinces
       for (const province of provincesData) {
+        if (!province || !province.name) continue;
         const provinceName = province.name;
-        
-        try {
-          // Initialize province structure
+        if (!provinceMap[provinceName]) {
           provinceMap[provinceName] = {
             province: provinceName,
             municipalities: []
           };
-          
-          // Fetch municipalities for this province
-          const municipalitiesUrl = `https://psgc.cloud/api/municipalities?province_code=${province.code}`;
-          const municipalitiesData = await AddressController.fetchWithRetry(municipalitiesUrl);
-          
-          // Process each municipality
-          for (const municipality of municipalitiesData) {
-            const municipalityName = municipality.name;
-            
-            try {
-              // Fetch barangays for this municipality
-              const barangaysUrl = `https://psgc.cloud/api/barangays?municipality_code=${municipality.code}`;
-              const barangaysData = await AddressController.fetchWithRetry(barangaysUrl);
-              
-              // Extract barangay names
-              const barangayNames = barangaysData.map(b => b.name);
-              
-              // Add to province structure
-              provinceMap[provinceName].municipalities.push({
-                name: municipalityName,
-                barangays: barangayNames
-              });
-            } catch (error) {
-              console.warn(`Failed to process municipality ${municipalityName}:`, error.message);
-              // Continue with other municipalities
-            }
-          }
-        } catch (error) {
-          console.warn(`Failed to process province ${provinceName}:`, error.message);
-          // Continue with other provinces
         }
+      }
+
+      // Attach cities/municipalities and their barangays to provinces
+      for (const city of citiesMunicipalitiesData) {
+        if (!city || !city.name) continue;
+
+        const municipalityName = city.name;
+        const provinceName = city.province && city.province.name ? city.province.name : city.province;
+
+        if (!provinceName) continue;
+
+        if (!provinceMap[provinceName]) {
+          provinceMap[provinceName] = {
+            province: provinceName,
+            municipalities: []
+          };
+        }
+
+        const key = `${provinceName}|||${municipalityName}`;
+        const barangayNames = barangaysMap.get(key) || [];
+
+        provinceMap[provinceName].municipalities.push({
+          name: municipalityName,
+          barangays: barangayNames
+        });
       }
       
       // Save each province to a separate JSON file
