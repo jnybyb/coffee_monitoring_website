@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import bgImage from '../components/layout/imgbg1/bg1.png';
+import bgImage from '../../assets/images/bg1.png';
 import PublicHeader from '../components/layout/PublicHeader';
 import PublicFooter from '../components/layout/PublicFooter';
 import { statisticsAPI } from '../../admin/services/api'; // Corrected import path

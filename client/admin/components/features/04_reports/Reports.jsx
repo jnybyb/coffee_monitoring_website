@@ -774,13 +774,22 @@ const Reports = () => {
           </>
         );
       case 'Farm Location':
+        // Build address string for farm location, filtering out empty and 'unknown' values
+        const farmAddress = (Array.isArray(item.address)
+          ? item.address
+          : typeof item.address === 'string'
+            ? item.address.split(',')
+            : [])
+          .map(part => part && typeof part === 'string' ? part.trim() : '')
+          .filter(part => part && part.toLowerCase() !== 'unknown')
+          .join(', ');
         return (
           <>
             <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 600 }}>{rowIndex + 1}</td>
             <td style={cellStyle}>{item.id || '—'}</td>
             <td style={cellStyle}>{item.beneficiaryName || '—'}</td>
             <td style={cellStyle}>{item.hectares || '—'}</td>
-            <td style={cellStyle}>{item.address || '—'}</td>
+            <td style={cellStyle}>{farmAddress || '—'}</td>
             <td style={cellStyle}>{item.coordinates?.length || 0} points</td>
           </>
         );
