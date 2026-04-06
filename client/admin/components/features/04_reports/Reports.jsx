@@ -676,7 +676,9 @@ const Reports = () => {
       case 'farm_hectares':
         return <td key={attrId} style={cellStyle}>{item.hectares || '—'}</td>;
       case 'farm_address':
-        return <td key={attrId} style={cellStyle}>{item.address || '—'}</td>;
+        // Filter out empty and 'unknown' values from address, matching Beneficiary List behavior
+        const farmAddress = (item.address || '').split(',').map(part => part.trim()).filter(part => part && part.toLowerCase() !== 'unknown').join(', ');
+        return <td key={attrId} style={cellStyle}>{farmAddress || '—'}</td>;
       case 'farm_coordinates':
         return <td key={attrId} style={cellStyle}>{item.coordinates?.length || 0} points</td>;
       
@@ -774,13 +776,15 @@ const Reports = () => {
           </>
         );
       case 'Farm Location':
+        // Filter out empty and 'unknown' values from address, matching Beneficiary List behavior
+        const farmLocationAddress = (item.address || '').split(',').map(part => part.trim()).filter(part => part && part.toLowerCase() !== 'unknown').join(', ');
         return (
           <>
             <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 600 }}>{rowIndex + 1}</td>
             <td style={cellStyle}>{item.id || '—'}</td>
             <td style={cellStyle}>{item.beneficiaryName || '—'}</td>
             <td style={cellStyle}>{item.hectares || '—'}</td>
-            <td style={cellStyle}>{item.address || '—'}</td>
+            <td style={cellStyle}>{farmLocationAddress || '—'}</td>
             <td style={cellStyle}>{item.coordinates?.length || 0} points</td>
           </>
         );
